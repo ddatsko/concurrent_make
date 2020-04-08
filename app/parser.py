@@ -27,6 +27,7 @@ class Parser:
     def get_build_targets(self) -> List[BuildTarget]:
         targets = []
         current_line = 0
+        bash_command = False
         while current_line < len(self.lines):
             line = self.lines[current_line]
             if not Parser.is_valid_line(line):
@@ -37,8 +38,11 @@ class Parser:
                 new_target = BuildTarget(target_file=match.groups('0')[0])
                 new_target.dependencies_files = match.groups('0')[1].split()
                 targets.append(new_target)
-            elif len(targets) > 0:
-                targets[-1].bash_commands.append(line)
+                bash_command = True
+            elif len(targets) > 0  and bash_command and line.startswith('\t'):
+                targets[-1].bash_commands.append(line.strip())
+            else:
+                bash_command = False
             current_line += 1
         BuildTarget.build_targets_dependencies(targets)
         return targets

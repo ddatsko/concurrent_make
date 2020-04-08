@@ -1,22 +1,19 @@
 from typing import List
+from errors import ParseError
+import os
 
 
 class BuildTarget:
-    target_file = None
-    dependencies_files = []
-    dependencies_targets = None
-    bash_commands = []
-    ready = False
-    up_to_date = False
-
-    def __init__(self, target_file: str = None, dependencies_files=None,
-                 bash_commands=None, ready: bool = False, up_to_date: bool = False):
+    def __init__(self, target_file: str = None, dependencies_files: list = None,
+                 bash_commands: list = None, ready: bool = False, up_to_date: bool = False):
         self.target_file = target_file
-        self.dependencies_files = dependencies_files if dependencies_files else []
-        self.bash_commands = bash_commands if bash_commands else []
+        self.dependencies_files = dependencies_files.copy() if dependencies_files else []
+        self.bash_commands = bash_commands.copy() if bash_commands else []
         self.ready = ready
-        self.up_to_date = up_to_date
+        self.up_to_date = False
         self.dependencies_targets = []
+        self.root = True
+        self.local_only = False
 
     def __repr__(self):
         return f"(Target: {self.target_file}, file dependencies: {self.dependencies_files}, target_depedencies: " \
@@ -26,8 +23,57 @@ class BuildTarget:
     def build_targets_dependencies(targets: List['BuildTarget']):
         # Modifies the input data, be careful
         target_by_name = {target.target_file: target for target in targets}
+        if len(target_by_name) != len(targets):
+            raise ParseError("Error! Two targets have the same name...")
         for target in targets:
             for dependency in target.dependencies_files:
                 if dependency in target_by_name:
                     target.dependencies_files.remove(dependency)
                     target.dependencies_targets.append(target_by_name[dependency])
+
+    @staticmethod
+    def get_build_order(targets: List['BuildTarget']) -> List['BuildTarget']:
+        targets_order = []
+
+        # Mark root elements
+        for build_target in targets:
+            for target_dep in build_target.dependencies_targets:
+                target_dep.root = False
+
+        # Iterate through targets and find out which should be re-compiled
+        def dfs(target: 'BuildTarget'):
+            newest_time = 0
+            up_to_date = True
+            target_file_time = os.path.getmtime(target.target_file) if os.path.exists(target.target_file) else 0
+            os.path.exists(target.target_file)
+            for file in target.dependencies_files:
+                if not os.path.exists(file):
+                    raise ParseError(f"Error! The file {file} does not exist but is in dependencies "
+                                     f"of a target {target.target_file}")
+                if os.path.getmtime(file) > target_file_time:
+                    up_to_date = False
+
+            for dep_target in target.dependencies_targets:
+                dfs(dep_target)
+                if os.path.exists(dep_target.target_file):
+                    newest_time = max(newest_time, os.path.getmtime(dep_target.target_file))
+                else:
+                    newest_time = float('inf')
+                up_to_date &= dep_target.up_to_date
+            if up_to_date and os.path.exists(target.target_file) and newest_time < os.path.getmtime(target.target_file):
+                target.ready = True
+                target.up_to_date = True
+            else:
+                targets_order.append(target)
+
+        for build_target in targets:
+            if build_target.root:
+                dfs(build_target)
+        return targets_order
+
+    @staticmethod
+    def target_by_filename(name: str, targets: List['BuildTarget']) -> 'BuildTarget' or None:
+        for target in targets:
+            if target.target_file == name:
+                return target
+        return None

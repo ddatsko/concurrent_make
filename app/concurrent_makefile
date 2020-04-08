@@ -1,11 +1,11 @@
 CXX = g++
 COMPILE_FLAGS = -O3
 
-RESULT: main
-LOCALLY:
+LOCALLY: sample_program/main
 
-main.o: main.cpp
-    $(CXX) -c -o main main.cpp $(COMPILE_FLAGS)
+sample_program/main.o: sample_program/main.cpp
+	$(CXX) -c -o sample_program/main.o sample_program/main.cpp $(COMPILE_FLAGS)
+	make	
 
-main: main.o
-    $(CXX) -o main main.o
+sample_program/main: sample_program/main.o
+	$(CXX) -o main sample_program/main.o

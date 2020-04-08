@@ -1,0 +1,11 @@
+CXX = g++
+COMPILE_FLAGS = -O3
+
+main: main.o greet.o greet.h
+	$(CXX) -o main main.o greet.o
+
+main.o: main.cpp
+	$(CXX) -c -o main.o main.cpp $(COMPILE_FLAGS)
+
+greet.o:
+	$(CXX) -c -o greet.o greet.cpp 
