@@ -1,0 +1,11 @@
+CXX = g++
+COMPILE_FLAGS = -O3
+
+RESULT: main
+LOCALLY:
+
+main.o: main.cpp
+    $(CXX) -c -o main main.cpp $(COMPILE_FLAGS)
+
+main: main.o
+    $(CXX) -o main main.o
