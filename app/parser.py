@@ -10,7 +10,6 @@ class Parser:
 
     def parse(self):
         self.replace_variables()
-        print(self.lines)
 
     def extract_variables(self):
         variables = {}
