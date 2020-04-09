@@ -4,6 +4,7 @@ import urllib3
 import asyncio
 import aiohttp
 from compressor import Compressor
+import os
 
 
 class RequestsManager:
@@ -14,7 +15,7 @@ class RequestsManager:
             self.hosts = open(hosts_filename).readlines()
         except FileNotFoundError:
             raise FileNotFoundError(f"Error! Hosts file cannot be found")
-        self.active_hosts = set()
+        self.active_hosts = []
         self.http = urllib3.PoolManager()
         self.check_active_hosts()
 
@@ -23,7 +24,7 @@ class RequestsManager:
             try:
                 response = self.http.request('get', host + '/api/v1/check')
                 if response.data.decode('utf-8') == 'OK':
-                    self.active_hosts.add(host)
+                    self.active_hosts.append(host)
                     print(host)
             except urllib3.exceptions.MaxRetryError as e:
                 pass
@@ -36,15 +37,22 @@ class RequestsManager:
         data = aiohttp.FormData()
         data.add_field('file',
                        open(archive_filename, 'rb'),
-                       filename='output.tar.xz')
+                       filename=archive_filename)
         resp = await session.post(url=url, data=data)
         # Note that this may raise an exception for non-2xx responses
         # You can either handle that here, or pass the exception through
-        data = await resp.text()
-        print(f"Received data for {url}")
+        data = await resp.content.read()
         return data
 
     async def build_targets(self):
         # TODO: Implement asynchronous sending requests here
+
         async with aiohttp.ClientSession() as session:
-            await RequestsManager.get_compiled_file(session, 'http://127.0.0.1:3000/api/v1/build', './output.tar.xz')
+            for target in self.targets:
+                filename = target.target_file + '.tar.xz'
+
+                target.build_archive(self.compressor,
+                                     filename=target.target_file)
+                response = await RequestsManager.get_compiled_file(session, self.active_hosts[0] + '/api/v1/build',
+                                                                   filename)
+                open(f'{os.getcwd()}/{target.target_file}', 'wb').write(response)

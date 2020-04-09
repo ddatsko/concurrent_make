@@ -26,10 +26,13 @@ class BuildTarget:
         if len(target_by_name) != len(targets):
             raise ParseError("Error! Two targets have the same name...")
         for target in targets:
+            dependencies_files = []
             for dependency in target.dependencies_files:
                 if dependency in target_by_name:
-                    target.dependencies_files.remove(dependency)
                     target.dependencies_targets.append(target_by_name[dependency])
+                else:
+                    dependencies_files.append(dependency)
+            target.dependencies_files = dependencies_files
 
     @staticmethod
     def get_build_order(targets: List['BuildTarget']) -> List['BuildTarget']:
@@ -77,3 +80,17 @@ class BuildTarget:
             if target.target_file == name:
                 return target
         return None
+
+    def create_commands_file(self, filename):
+        with open(filename, 'w') as f:
+            f.write('\n'.join(self.bash_commands))
+
+    def build_archive(self, compressor, filename=''):
+        if not filename:
+            filename = self.target_file
+        files_to_compress = [target.target_file for target in self.dependencies_targets] + [file for file in
+                                                                                            self.dependencies_files]
+        commands_filename = self.target_file.split('/')[-1] + '.sh'
+        self.create_commands_file(commands_filename)
+
+        compressor.compress(files_to_compress + [commands_filename], filename)

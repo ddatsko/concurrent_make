@@ -8,9 +8,8 @@ class Compressor:
         self.root_path = root_path if root_path.endswith('/') else root_path + '/'
 
     def compress(self, files: Iterable[str], output_file_name: str):
-        print(f"Compressing files {files}")
         if not output_file_name.endswith('tar.xz'):
-            output_file_name += '.tar.xz'
+            output_file_name += 'tar.xz'
         cur_dir = os.getcwd()
         try:
             os.chdir(self.root_path)
@@ -19,3 +18,9 @@ class Compressor:
                     archive.add(file)
         finally:
             os.chdir(cur_dir)
+
+    def extract_files(self, archive: str):
+        if not archive.endswith('tar.xz'):
+            raise Exception("Archive filename is of bad format")
+        file = tarfile.open(self.root_path + archive, 'r:xz')
+        file.extractall(f"{self.root_path}/{archive[:-7]}")
