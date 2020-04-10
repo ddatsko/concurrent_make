@@ -21,7 +21,6 @@ def main():
             target.local_only = True
         targets.remove(locally)
     targets_order = BuildTarget.get_build_order(targets)
-    print(targets_order)
 
     rm = RequestsManager(targets_order, 'hosts', Compressor())
     asyncio.run(rm.build_targets())

@@ -32,17 +32,15 @@ class RequestsManager:
                 print(f'Error in checking host: {e}')
 
     @staticmethod
-    async def get_compiled_file(session: aiohttp.ClientSession, url: str, archive_filename: str) -> dict:
+    async def get_compiled_file(session: aiohttp.ClientSession, url: str, archive_filename: str) -> bytes:
         print(f"Sending file to {url}")
         data = aiohttp.FormData()
         data.add_field('file',
                        open(archive_filename, 'rb'),
                        filename=archive_filename)
         resp = await session.post(url=url, data=data)
-        # Note that this may raise an exception for non-2xx responses
-        # You can either handle that here, or pass the exception through
-        data = await resp.content.read()
-        return data
+
+        return await resp.content.read()
 
     async def build_targets(self):
         # TODO: Implement asynchronous sending requests here
