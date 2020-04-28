@@ -1,12 +1,15 @@
 from typing import List
 from errors import ParseError
 import os
+import re
 
 
 class BuildTarget:
-    def __init__(self, target_file: str = None, dependencies_files: list = None,
+    dependencies_targets: List['BuildTarget'];
+
+    def __init__(self, target_files: List[str], dependencies_files: list = None,
                  bash_commands: list = None, ready: bool = False, up_to_date: bool = False):
-        self.target_file = target_file
+        self.target_files = target_files.copy()
         self.dependencies_files = dependencies_files.copy() if dependencies_files else []
         self.bash_commands = bash_commands.copy() if bash_commands else []
         self.ready = ready
@@ -16,13 +19,48 @@ class BuildTarget:
         self.local_only = False
 
     def __repr__(self):
-        return f"(Target: {self.target_file}, file dependencies: {self.dependencies_files}, target_depedencies: " \
-               f"{[t.target_file for t in self.dependencies_targets]} commands: {self.bash_commands})\n"
+        return f"(Targets: {', '.join(self.target_files)}, file dependencies: {self.dependencies_files}, target_depedencies: " \
+               f"{[''.join(t.target_files) for t in self.dependencies_targets]} commands: {self.bash_commands})\n"
+
+    @staticmethod
+    def get_modification_time(filename: str) -> int or float:
+        if os.path.exists(filename):
+            return os.path.getmtime(filename)
+        else:
+            return float("inf")
+
+    def targets_exist(self) -> bool:
+        for file in self.target_files:
+            if not os.path.exists(file):
+                return False
+        return True
+
+    def get_latest_modification_time(self):
+        modification_time = 0
+        for file in self.target_files:
+            modification_time = max(modification_time, BuildTarget.get_modification_time(file))
+        return modification_time
+
+    def substitute_for_absolute_paths(self, root: str):
+        if root[-1] == '/':
+            root = root[:-1]
+
+        replaces = {file: root + os.path.abspath(file) for file in self.dependencies_files + self.target_files}
+        self.dependencies_files = [replaces[file] for file in self.dependencies_files]
+        self.target_files = [replaces[file] for file in self.target_files]
+
+        new_bash_commands = []
+        for command in self.bash_commands:
+            updated_command = ' ' + command + ' '  # simple way to make all the words be surrounded by spaces
+            for file in replaces:
+                updated_command = re.sub(rf'\s{file}\s', replaces[file], updated_command)
+            new_bash_commands.append(updated_command)
+        self.bash_commands = new_bash_commands
 
     @staticmethod
     def build_targets_dependencies(targets: List['BuildTarget']):
         # Modifies the input data, be careful
-        target_by_name = {target.target_file: target for target in targets}
+        target_by_name = {file: target for target in targets for file in target.target_files}
         if len(target_by_name) != len(targets):
             raise ParseError("Error! Two targets have the same name...")
         for target in targets:
@@ -35,62 +73,13 @@ class BuildTarget:
             target.dependencies_files = dependencies_files
 
     @staticmethod
-    def get_build_order(targets: List['BuildTarget']) -> List['BuildTarget']:
-        targets_order = []
-
-        # Mark root elements
-        for build_target in targets:
-            for target_dep in build_target.dependencies_targets:
-                target_dep.root = False
-
-        # Iterate through targets and find out which should be re-compiled
-        def dfs(target: 'BuildTarget'):
-            newest_time = 0
-            up_to_date = True
-            target_file_time = os.path.getmtime(target.target_file) if os.path.exists(target.target_file) else 0
-            os.path.exists(target.target_file)
-            for file in target.dependencies_files:
-                if not os.path.exists(file):
-                    raise ParseError(f"Error! The file {file} does not exist but is in dependencies "
-                                     f"of a target {target.target_file}")
-                if os.path.getmtime(file) > target_file_time:
-                    up_to_date = False
-
-            for dep_target in target.dependencies_targets:
-                dfs(dep_target)
-                if os.path.exists(dep_target.target_file):
-                    newest_time = max(newest_time, os.path.getmtime(dep_target.target_file))
-                else:
-                    newest_time = float('inf')
-                up_to_date &= dep_target.up_to_date
-            if up_to_date and os.path.exists(target.target_file) and newest_time < os.path.getmtime(target.target_file):
-                target.ready = True
-                target.up_to_date = True
-            else:
-                targets_order.append(target)
-
-        for build_target in targets:
-            if build_target.root:
-                dfs(build_target)
-        return targets_order
-
-    @staticmethod
     def target_by_filename(name: str, targets: List['BuildTarget']) -> 'BuildTarget' or None:
         for target in targets:
-            if target.target_file == name:
-                return target
+            for file in target.target_files:
+                if file == name:
+                    return target
         return None
 
-    def create_commands_file(self, filename):
+    async def create_commands_file(self, filename):
         with open(filename, 'w') as f:
             f.write('\n'.join(self.bash_commands))
-
-    def build_archive(self, compressor, filename=''):
-        if not filename:
-            filename = self.target_file
-        files_to_compress = [target.target_file for target in self.dependencies_targets] + [file for file in
-                                                                                            self.dependencies_files]
-        commands_filename = self.target_file.split('/')[-1] + '.sh'
-        self.create_commands_file(commands_filename)
-
-        compressor.compress(files_to_compress + [commands_filename], filename)

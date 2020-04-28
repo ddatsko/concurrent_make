@@ -1,9 +1,4 @@
-CXX = g++
-COMPILE_FLAGS = -O3
-
-LOCALLY: sample_program/main
-
-sample_program/main.o: sample_program/main.cpp sample_program/greet.h
+sample_program/main.o: sample_program/main.cpp sample_program/greet.h /usr/local/lib/libboost_random.so
 	$(CXX) -c -o sample_program/main.o sample_program/main.cpp $(COMPILE_FLAGS)
 
 sample_program/main: sample_program/main.o sample_program/greet.o sample_program/greet.h

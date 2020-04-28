@@ -15,15 +15,20 @@ def main():
     p = Parser(lines)
     p.parse()
     targets = p.get_build_targets()
-    locally = BuildTarget.target_by_filename('LOCALLY', targets)
-    if locally:
-        for target in locally.dependencies_targets:
-            target.local_only = True
-        targets.remove(locally)
+
+
+
+    #
+    # locally = BuildTarget.target_by_filename('.LOCALLY', targets)
+    # if locally:
+    #     for target in locally.dependencies_targets:
+    #         target.local_only = True
+    #     targets.remove(locally)
+
     targets_order = BuildTarget.get_build_order(targets)
 
-    rm = RequestsManager(targets_order, 'hosts', Compressor())
-    asyncio.run(rm.build_targets())
+    rm = RequestsManager(targets_order, hosts_file, Compressor())
+    asyncio.run(rm.build_targets(targets_order[0]))
 
 
 if __name__ == "__main__":
