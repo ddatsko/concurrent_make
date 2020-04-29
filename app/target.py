@@ -51,9 +51,9 @@ class BuildTarget:
 
         new_bash_commands = []
         for command in self.bash_commands:
-            updated_command = ' ' + command + ' '  # simple way to make all the words be surrounded by spaces
+            updated_command = f' {command} '  # simple way to make all the words be surrounded by spaces
             for file in replaces:
-                updated_command = re.sub(rf'\s{file}\s', replaces[file], updated_command)
+                updated_command = re.sub(rf'\s{file}\s', f' {replaces[file]} ', updated_command)
             new_bash_commands.append(updated_command)
         self.bash_commands = new_bash_commands
 

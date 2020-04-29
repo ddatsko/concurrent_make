@@ -71,7 +71,7 @@ class Parser:
 
         return expression
 
-    def get_build_targets(self) -> List[BuildTarget]:
+    def get_build_targets(self):
         targets = []
         current_line = 0
         bash_command = False
@@ -91,8 +91,11 @@ class Parser:
             else:
                 bash_command = False
             current_line += 1
+
+        if self.default_target is None:
+            self.default_target = targets[0]
         BuildTarget.build_targets_dependencies(targets)
-        return targets
+        self.targets = targets
 
     @staticmethod
     def is_valid_line(line: str) -> bool:

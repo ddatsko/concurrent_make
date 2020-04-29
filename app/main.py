@@ -10,26 +10,15 @@ file = 'concurrent_makefile'
 hosts_file = 'hosts'
 
 
-def main():
+async def main():
     lines = open(file, 'r').readlines()
     p = Parser(lines)
     p.parse()
     targets = p.get_build_targets()
 
-
-
-    #
-    # locally = BuildTarget.target_by_filename('.LOCALLY', targets)
-    # if locally:
-    #     for target in locally.dependencies_targets:
-    #         target.local_only = True
-    #     targets.remove(locally)
-
-    targets_order = BuildTarget.get_build_order(targets)
-
-    rm = RequestsManager(targets_order, hosts_file, Compressor())
-    asyncio.run(rm.build_targets(targets_order[0]))
+    rm = RequestsManager(p.default_target, hosts_file, Compressor())
+    await rm.build_targets()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
