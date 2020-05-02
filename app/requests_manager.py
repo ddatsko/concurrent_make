@@ -59,41 +59,40 @@ class RequestsManager:
     async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> bytes:
 
         # Acquire the lock to get a temporary file
-        await self.lock.acquire()
-        with tempfile.NamedTemporaryFile('w') as file:
-            self.lock.release()  # Release the lock as it is not needed in this block
+        async with self.lock:
+            tempdir = tempfile.TemporaryDirectory()
+
             data = aiohttp.FormData()
-            archive_filename = file.name + '.tar.xz'
-            commands_filename = file.name + '.sh'
+            archive_file = tempfile.NamedTemporaryFile(suffix='tar.xz')
+            commands_file = tempfile.NamedTemporaryFile(suffix='.sh')
+            target.substitute_for_absolute_paths('/')
 
-            data.add_field('targets', str(target.target_files))
-            data.add_field('commands_file', commands_filename)
+            data.add_field('targets', ', '.join(target.target_files))
+            data.add_field('commands_file', commands_file.name)
 
-            async with self.lock:
-                # Shared data
-                target.substitute_for_absolute_paths('/')
+            # determine files that should be compressed
+            files_to_compress = []
+            for tgt in target.dependencies_targets:
+                for f in tgt.target_files:
+                    files_to_compress.append(f)
+            files_to_compress += [file for file in target.dependencies_files]
 
-                # determine files that should be compressed
-                files_to_compress = []
-                for tgt in target.dependencies_targets:
-                    for f in tgt.target_files:
-                        files_to_compress.append(f)
-                files_to_compress += [file for file in target.dependencies_files]
+            await target.create_commands_file(commands_file.name)
 
-                await target.create_commands_file(commands_filename)
+            self.compressor.compress(files_to_compress + [commands_file.name], archive_file.name)
 
-                self.compressor.compress(files_to_compress + [commands_filename], archive_filename)
+            data.add_field('file',
+                           open(archive_file.name, 'rb'),
+                           filename=archive_file.name.split('/')[-1])
+            host = await self.get_available_host()
 
-                data.add_field('file',
-                               open(archive_filename, 'rb'),
-                               filename=archive_filename.split('/')[-1])
+            archive_file.close()
+            commands_file.close()
 
-                host = await self.get_available_host()
-
-            # Lock is released
-            result = await self.get_archive(host, data, session)
-            await self.release_host(host)
-            return result
+        # Lock is released
+        result = await self.get_archive(host, data, session)
+        await self.release_host(host)
+        return result
 
     async def get_archive(self, host: str, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
         resp = await session.post(url=host + RequestsManager.build_api_path, data=data)
@@ -108,6 +107,10 @@ class RequestsManager:
 
     async def build_target(self, target: BuildTarget, session: aiohttp.ClientSession):
         # Simple DFS here
+        async with self.lock:
+            if target.up_to_date:
+                return
+            target.up_to_date = True
 
         dependency_builds = []
         for dependency in target.dependencies_targets:

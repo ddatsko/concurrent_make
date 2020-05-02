@@ -1,8 +1,8 @@
 sample_program/main.o: sample_program/main.cpp sample_program/greet.h /usr/local/lib/libboost_random.so
-	$(CXX) -c -o sample_program/main.o sample_program/main.cpp $(COMPILE_FLAGS)
+	gcc -c -o sample_program/main.o sample_program/main.cpp -O3
 
 sample_program/main: sample_program/main.o sample_program/greet.o sample_program/greet.h
-	$(CXX) -o sample_program/main sample_program/main.o sample_program/greet.o
+	gcc -o sample_program/main sample_program/main.o sample_program/greet.o
 
 sample_program/greet.o: sample_program/greet.cpp sample_program/greet.h
-	$(CXX) -c -o sample_program/greet.o sample_program/greet.cpp $(COMPILE_FLAGS)
+	gcc -c -o sample_program/greet.o sample_program/greet.cpp -O3

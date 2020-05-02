@@ -1,21 +1,26 @@
 import os
+import re
 
 
 class CommandRunner:
-    def __init__(self, root_dir: str):
+    def __init__(self, root_dir: str = '/'):
         self.root_dir = root_dir
 
-    def run_commands(self, commands_file: str) -> str:
+    def run_commands(self, commands_file: str, abs_paths_root: str) -> str:
         """
         :return the name of created file (target)
         """
         cur_dir = os.getcwd()
+        res = []
         try:
             os.chdir(self.root_dir)
-            os.system(f'chmod +x {commands_file}')
-            os.system(f'./{commands_file}')
+
+            # Considering that all the paths were substitute for the absolute ones
+            lines = [re.sub(r'\s/', f' {abs_paths_root}', line) for line in open(commands_file).readlines()]
+            input()
+            for command in lines:
+                print(command)
+                res.append(os.popen(command).read())
         finally:
             os.chdir(cur_dir)
-        output_filename = commands_file[:-10]
-        if os.path.exists(output_filename):
-            return output_filename
+        return '\n'.join(res)
