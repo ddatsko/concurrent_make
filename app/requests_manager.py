@@ -6,7 +6,7 @@ from compressor import Compressor
 import os
 import tempfile
 import asyncio
-from errors import ParseError
+from errors import ParseError, ExecutionError
 import time
 
 
@@ -60,8 +60,6 @@ class RequestsManager:
 
         # Acquire the lock to get a temporary file
         async with self.lock:
-            tempdir = tempfile.TemporaryDirectory()
-
             data = aiohttp.FormData()
             archive_file = tempfile.NamedTemporaryFile(suffix='tar.xz')
             commands_file = tempfile.NamedTemporaryFile(suffix='.sh')
@@ -70,16 +68,11 @@ class RequestsManager:
             data.add_field('targets', ', '.join(target.target_files))
             data.add_field('commands_file', commands_file.name)
 
-            # determine files that should be compressed
-            files_to_compress = []
-            for tgt in target.dependencies_targets:
-                for f in tgt.target_files:
-                    files_to_compress.append(f)
-            files_to_compress += [file for file in target.dependencies_files]
-
             await target.create_commands_file(commands_file.name)
 
-            self.compressor.compress(files_to_compress + [commands_file.name], archive_file.name)
+
+
+            self.compressor.compress(target.all_dependency_files + [commands_file.name], archive_file.name)
 
             data.add_field('file',
                            open(archive_file.name, 'rb'),
@@ -92,12 +85,20 @@ class RequestsManager:
         # Lock is released
         result = await self.get_archive(host, data, session)
         await self.release_host(host)
+
+        async with self.lock:
+            await Compressor.extract_files(result)
+
         return result
 
     async def get_archive(self, host: str, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
-        resp = await session.post(url=host + RequestsManager.build_api_path, data=data)
-        # Note that this may raise an exception for non-2xx responses
-        # You can either handle that here, or pass the exception through
+        try:
+            resp = await session.post(url=host + RequestsManager.build_api_path, data=data)
+            if resp.status != 200:
+                raise ExecutionError("", str(await resp.read()))
+        except ExecutionError as e:
+            print(e)
+            raise e
         data = await resp.content.read()
         return data
 
@@ -115,13 +116,16 @@ class RequestsManager:
         dependency_builds = []
         for dependency in target.dependencies_targets:
             dependency_builds.append(self.build_target(dependency, session))
+
+        print("Waiting for dependencies to build")
+
         await asyncio.gather(*dependency_builds)
 
         newest_time = 0
         target_files_time = target.get_latest_modification_time()
         up_to_date = True
 
-        for file in target.dependencies_files:
+        for file in target.dependencies_files_only:
             if not os.path.exists(file):
                 raise ParseError(f"Error! The file {file} does not exist but is in dependencies "
                                  f"of a target {', '.join(target.target_files)}")
@@ -134,4 +138,5 @@ class RequestsManager:
         if up_to_date and newest_time < target.get_latest_modification_time() and target.targets_exist():
             target.up_to_date = True
         else:
+            print("Waiting for a compiled file...")
             await self.get_compiled_file(session, target)

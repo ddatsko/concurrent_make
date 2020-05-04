@@ -16,10 +16,11 @@ def main_page():
 
 @app.route('/api/v1/build', methods=['POST'])
 def build():
+    # Extracting files
     tempdir = tempfile.TemporaryDirectory()
+    print(request.files)
 
     f = request.files['file']
-    target_files = request.form['targets']
     commands_file = request.form['commands_file'].strip('/')
 
     archive_file = tempfile.NamedTemporaryFile(suffix='.tar.xz', dir=tempdir.name)
@@ -33,31 +34,25 @@ def build():
 
     archive_file.close()
 
+    # Run commands
+
     command_runner = CommandRunner(new_root)
-    print(os.listdir(tempdir.name))
-    print(os.listdir(f'{tempdir.name}/{archive_filename.split(".")[0]}/tmp'))
-    print(commands_file)
 
-    result_output = command_runner.run_commands(commands_file, new_root)
+    output, code = command_runner.run_commands(commands_file, new_root)
+    print(output, code)
+    if code != 0:
+        response = output, 400
+    else:
+        # Sending files back
+        target_files = [target.strip('/') for target in request.form['targets'].split(', ')]
+        compressor.root_path = new_root
+        output_file = tempfile.NamedTemporaryFile(suffix='.tar.xz')
+        compressor.compress(target_files, output_file.name)
+        response = send_file(output_file, mimetype='application/x-object')
 
-    print(result_output)
+    tempdir.cleanup()
 
-
-
-    # target = f.filename[:-7]
-    # print(target)
-    # f.filename = f.filename.split('/')[-1]
-    # archive_filename = f'{os.getcwd()}/{f.filename}'
-    # f.save(archive_filename)
-    #
-    #
-    #
-    # command_runner = CommandRunner(f'{os.getcwd()}/{f.filename[:-7]}')
-    # commands_file = f"{f.filename[:-7]}.sh"
-    # output = command_runner.run_commands(commands_file)
-
-    # return send_file(f'{archive_filename[:-7]}/{target}', mimetype='application/x-object')
-    return 'hello'
+    return response
 
 
 if __name__ == "__main__":

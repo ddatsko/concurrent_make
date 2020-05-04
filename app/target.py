@@ -10,7 +10,8 @@ class BuildTarget:
     def __init__(self, target_files: List[str], dependencies_files: list = None,
                  bash_commands: list = None, ready: bool = False, up_to_date: bool = False):
         self.target_files = target_files.copy()
-        self.dependencies_files = dependencies_files.copy() if dependencies_files else []
+        self.dependencies_files_only = dependencies_files.copy() if dependencies_files else []
+        self.all_dependency_files = self.dependencies_files_only.copy()
         self.bash_commands = bash_commands.copy() if bash_commands else []
         self.ready = ready
         self.up_to_date = False
@@ -19,7 +20,7 @@ class BuildTarget:
         self.local_only = False
 
     def __repr__(self):
-        return f"(Targets: {', '.join(self.target_files)}, file dependencies: {self.dependencies_files}, target_depedencies: " \
+        return f"(Targets: {', '.join(self.target_files)}, file dependencies: {self.dependencies_files_only}, target_depedencies: " \
                f"{[''.join(t.target_files) for t in self.dependencies_targets]} commands: {self.bash_commands})\n"
 
     @staticmethod
@@ -42,12 +43,13 @@ class BuildTarget:
         return modification_time
 
     def substitute_for_absolute_paths(self, root: str):
-        if root[-1] == '/':
+        if len(root) > 0 and root[-1] == '/':
             root = root[:-1]
 
-        replaces = {file: root + os.path.abspath(file) for file in self.dependencies_files + self.target_files}
-        self.dependencies_files = [replaces[file] for file in self.dependencies_files]
+        replaces = {file: root + os.path.abspath(file) for file in self.all_dependency_files + self.target_files}
+        self.dependencies_files_only = [replaces[file] for file in self.dependencies_files_only]
         self.target_files = [replaces[file] for file in self.target_files]
+        self.all_dependency_files = [replaces[file] for file in self.all_dependency_files]
 
         new_bash_commands = []
         for command in self.bash_commands:
@@ -65,12 +67,12 @@ class BuildTarget:
             raise ParseError("Error! Two targets have the same name...")
         for target in targets:
             dependencies_files = []
-            for dependency in target.dependencies_files:
+            for dependency in target.dependencies_files_only:
                 if dependency in target_by_name:
                     target.dependencies_targets.append(target_by_name[dependency])
                 else:
                     dependencies_files.append(dependency)
-            target.dependencies_files = dependencies_files
+            target.dependencies_files_only = dependencies_files
 
     @staticmethod
     def target_by_filename(name: str, targets: List['BuildTarget']) -> 'BuildTarget' or None:

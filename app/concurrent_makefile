@@ -1,8 +1,8 @@
-sample_program/main.o: sample_program/main.cpp sample_program/greet.h /usr/local/lib/libboost_random.so
-	gcc -c -o sample_program/main.o sample_program/main.cpp -O3
-
 sample_program/main: sample_program/main.o sample_program/greet.o sample_program/greet.h
-	gcc -o sample_program/main sample_program/main.o sample_program/greet.o
+	g++ -o sample_program/main sample_program/main.o sample_program/greet.o
 
 sample_program/greet.o: sample_program/greet.cpp sample_program/greet.h
-	gcc -c -o sample_program/greet.o sample_program/greet.cpp -O3
+	g++ -c -o sample_program/greet.o sample_program/greet.cpp -O3
+
+sample_program/main.o: sample_program/main.cpp sample_program/greet.h /usr/local/lib/libboost_random.so
+	g++ -c -o sample_program/main.o sample_program/main.cpp -O3

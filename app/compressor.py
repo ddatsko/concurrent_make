@@ -1,6 +1,7 @@
 from typing import Iterable
 import tarfile
 import os
+import tempfile
 
 
 class Compressor:
@@ -19,3 +20,14 @@ class Compressor:
                     archive.add(file)
         finally:
             os.chdir(cur_dir)
+
+    @staticmethod
+    async def extract_files(buffer: bytes):
+        tmp_archive = tempfile.NamedTemporaryFile(suffix='tar.xz', prefix=os.getcwd())
+        archive_name = tmp_archive.name
+        with open(archive_name, 'wb') as file:
+            file.write(buffer)
+
+        with tarfile.open(archive_name, 'r:xz') as file:
+            file.extractall(f"/")
+        tmp_archive.close()

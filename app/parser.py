@@ -83,7 +83,8 @@ class Parser:
             match = re.match(r"\s*(.*):\s*(.*)\s*", line)
             if match:
                 new_target = BuildTarget(target_files=list(match.groups('0')[0].split()))
-                new_target.dependencies_files = match.groups('0')[1].split()
+                new_target.dependencies_files_only = match.groups('0')[1].split()
+                new_target.all_dependency_files.extend(new_target.dependencies_files_only)
                 targets.append(new_target)
                 bash_command = True
             elif len(targets) > 0 and bash_command and line.startswith('\t'):

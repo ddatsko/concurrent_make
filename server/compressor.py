@@ -24,3 +24,4 @@ class Compressor:
             raise Exception("Archive filename is of bad format")
         file = tarfile.open(self.root_path + archive, 'r:xz')
         file.extractall(f"{self.root_path}/{archive[:-7]}")
+        file.close()

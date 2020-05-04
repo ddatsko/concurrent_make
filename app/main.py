@@ -14,7 +14,7 @@ async def main():
     lines = open(file, 'r').readlines()
     p = Parser(lines)
     p.parse()
-    targets = p.get_build_targets()
+    p.get_build_targets()
 
     rm = RequestsManager(p.default_target, hosts_file, Compressor())
     await rm.build_targets()
