@@ -1,4 +1,3 @@
-from typing import List
 from target import BuildTarget
 import urllib3
 import aiohttp
@@ -7,12 +6,10 @@ import os
 import tempfile
 import asyncio
 from errors import ParseError, ExecutionError
-import time
+import config
 
 
 class RequestsManager:
-    build_api_path = '/api/v1/build'
-
     def __init__(self, default_target: BuildTarget, hosts_filename, compressor: Compressor):
         self.compressor = compressor
         self.root_target = default_target
@@ -31,7 +28,7 @@ class RequestsManager:
     def check_active_hosts(self):
         for host in self.hosts:
             try:
-                response = self.http.request('get', host + '/api/v1/check')
+                response = self.http.request('get', host + config.check_host_path)
                 if response.data.decode('utf-8') == 'OK':
                     self.active_hosts.append(host)
                     print(host)
@@ -70,14 +67,19 @@ class RequestsManager:
 
             await target.create_commands_file(commands_file.name)
 
+        host = await self.get_available_host()
 
+        response = await session.post(url=f'{host}{config.libraries_host_path}',
+                                      json=f'{{"needed_libraries": {[file for file in target.all_dependency_files if file.startswith(config.substitutable_lib_dirs)]}}}')
+        present_libraries = (await response.json())['present_libraries']
 
-            self.compressor.compress(target.all_dependency_files + [commands_file.name], archive_file.name)
+        async with self.lock:
+            self.compressor.compress([file for file in target.all_dependency_files if file not in present_libraries]
+                                     + [commands_file.name], archive_file.name)
 
             data.add_field('file',
                            open(archive_file.name, 'rb'),
                            filename=archive_file.name.split('/')[-1])
-            host = await self.get_available_host()
 
             archive_file.close()
             commands_file.close()
@@ -93,7 +95,7 @@ class RequestsManager:
 
     async def get_archive(self, host: str, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
         try:
-            resp = await session.post(url=host + RequestsManager.build_api_path, data=data)
+            resp = await session.post(url=host + config.build_host_path, data=data)
             if resp.status != 200:
                 raise ExecutionError("", str(await resp.read()))
         except ExecutionError as e:

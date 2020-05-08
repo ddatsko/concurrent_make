@@ -18,13 +18,12 @@ class CommandRunner:
             # Considering that all the paths were substitute for the absolute ones
             lines = [re.sub(r'\s/', f' {abs_paths_root}', line) for line in open(commands_file).readlines()]
             for command in lines:
-                print(command)
                 command_out = os.popen(command)
                 command_res = command_out.read()
                 exit_code = command_out.close()
                 res.append(command_res)
                 if exit_code:
-                    return '\n'.join(res), command_res[1]
+                    return '\n'.join(res), exit_code
         except Exception as e:
             print(e)
             pass

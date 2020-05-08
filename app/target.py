@@ -5,7 +5,7 @@ import re
 
 
 class BuildTarget:
-    dependencies_targets: List['BuildTarget'];
+    dependencies_targets: List['BuildTarget']
 
     def __init__(self, target_files: List[str], dependencies_files: list = None,
                  bash_commands: list = None, ready: bool = False, up_to_date: bool = False):

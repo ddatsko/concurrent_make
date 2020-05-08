@@ -1,6 +1,6 @@
 import re
 from target import BuildTarget
-from typing import List
+import os
 
 
 class Parser:
@@ -101,3 +101,14 @@ class Parser:
     @staticmethod
     def is_valid_line(line: str) -> bool:
         return line.strip() and (not re.match(r'\s*#.*', line))
+
+    @staticmethod
+    def check_file_with_make(filename: str) -> (bool, str):
+        make_out = os.popen("make")
+        output = make_out.read()
+        exit_code = make_out.close()
+        if exit_code != 0:
+            return False, output
+        return True, output
+
+
