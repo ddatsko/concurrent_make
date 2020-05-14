@@ -61,26 +61,25 @@ class RequestsManager:
             archive_file = tempfile.NamedTemporaryFile(suffix='tar.xz')
             commands_file = tempfile.NamedTemporaryFile(suffix='.sh')
             target.substitute_for_absolute_paths('/')
-
+            data.add_field('workdir', os.getcwd())
             data.add_field('targets', ', '.join(target.target_files))
             data.add_field('commands_file', commands_file.name)
 
-            await target.create_commands_file(commands_file.name)
-
         host = await self.get_available_host()
-
         response = await session.post(url=f'{host}{config.libraries_host_path}',
                                       json=f'{{"needed_libraries": {[file for file in target.all_dependency_files if file.startswith(config.substitutable_lib_dirs)]}}}')
         present_libraries = (await response.json())['present_libraries']
 
         async with self.lock:
+            for library in present_libraries:
+                await target.replace_in_commands(library, f'${{{library.split("/")[-1]}}}')
+            await target.create_commands_file(commands_file.name)
+
             self.compressor.compress([file for file in target.all_dependency_files if file not in present_libraries]
                                      + [commands_file.name], archive_file.name)
-
             data.add_field('file',
                            open(archive_file.name, 'rb'),
                            filename=archive_file.name.split('/')[-1])
-
             archive_file.close()
             commands_file.close()
 

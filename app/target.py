@@ -85,3 +85,8 @@ class BuildTarget:
     async def create_commands_file(self, filename):
         with open(filename, 'w') as f:
             f.write('\n'.join(self.bash_commands))
+
+    async def replace_in_commands(self, pattern: str, value: str):
+        self.bash_commands = list(map(lambda x: f' {x} ', self.bash_commands))  # Wrap each command into spaces
+        for i in range(len(self.bash_commands)):
+            self.bash_commands[i] = re.sub(rf'\s{pattern}\s', f' {value} ', self.bash_commands[i])

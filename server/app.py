@@ -1,7 +1,5 @@
 from flask import Flask, request, send_file, jsonify
 import tempfile
-import time
-import os
 from runner import CommandRunner
 from compressor import Compressor
 from Library import Library, find_libraries
@@ -35,6 +33,7 @@ def get_present_libraries():
 
 @app.route('/api/v1/build', methods=['POST'])
 def build():
+    print(request.form)
     # Extracting files
     tempdir = tempfile.TemporaryDirectory()
     print(request.files)
@@ -54,10 +53,11 @@ def build():
     archive_file.close()
 
     # Run commands
+    print(new_root)
 
-    command_runner = CommandRunner(new_root)
+    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'))
 
-    output, code = command_runner.run_commands(commands_file, new_root)
+    output, code = command_runner.run_commands(new_root + commands_file, new_root)
     print(output, code)
     if code != 0:
         response = output, 400
@@ -76,4 +76,4 @@ def build():
 
 if __name__ == "__main__":
     app.config['LIBRARIES'] = find_libraries(app.config['LIBRARIES_DIRECTORIES'])
-    app.run(port=3000)
+    app.run(host='0.0.0.0', port=3000)

@@ -1,5 +1,5 @@
-sample_program/main: sample_program/main.o sample_program/greet.o sample_program/greet.h
-	g++ -o sample_program/main sample_program/main.o sample_program/greet.o
+sample_program/main: sample_program/main.o sample_program/greet.o sample_program/greet.h sample_program/libtbb.so sample_program/libtbb.so.2
+	g++ -o sample_program/main sample_program/main.o sample_program/greet.o -ltbb -L ./sample_program
 
 sample_program/greet.o: sample_program/greet.cpp sample_program/greet.h
 	g++ -c -o sample_program/greet.o sample_program/greet.cpp -O3
