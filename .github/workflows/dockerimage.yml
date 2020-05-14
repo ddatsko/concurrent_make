@@ -1,0 +1,17 @@
+name: Build and Push Docker image
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: cd server && docker build . -t ddatsko/concurrent_make:latest
+    - name: Login into DockerHub
+      run: docker login -u ddatsko -p ${{ secrets.DOCKER_PASSWORD }}
+    - name: Push to DockerHub
+      run: cd server && docker push ddatsko/concurrent_make:latest
