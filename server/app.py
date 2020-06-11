@@ -5,6 +5,7 @@ from compressor import Compressor
 from Library import Library, find_libraries
 from errors import InvalidLibraryFileName
 import json
+import sys
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploaded_files'
@@ -33,6 +34,7 @@ def get_present_libraries():
 
 @app.route('/api/v1/build', methods=['POST'])
 def build():
+
     print(request.form)
     # Extracting files
     tempdir = tempfile.TemporaryDirectory()
@@ -55,7 +57,7 @@ def build():
     # Run commands
     print(new_root)
 
-    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'))
+    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'), app.config['LIBRARIES'])
 
     output, code = command_runner.run_commands(new_root + commands_file, new_root)
     print(output, code)
@@ -76,4 +78,4 @@ def build():
 
 if __name__ == "__main__":
     app.config['LIBRARIES'] = find_libraries(app.config['LIBRARIES_DIRECTORIES'])
-    app.run(host='0.0.0.0', port=3000)
+    app.run(host='0.0.0.0', port=3000, debug=True)

@@ -7,10 +7,11 @@ import tempfile
 import asyncio
 from errors import ParseError, ExecutionError
 import config
+from parser import Parser
 
 
 class RequestsManager:
-    def __init__(self, default_target: BuildTarget, hosts_filename, compressor: Compressor):
+    def __init__(self, default_target: BuildTarget, hosts_filename, compressor: Compressor, parser: Parser):
         self.compressor = compressor
         self.root_target = default_target
         try:
@@ -24,6 +25,7 @@ class RequestsManager:
         self.check_active_hosts()
         self.lock = asyncio.Lock()
         self.host_cond_var = asyncio.Condition()
+        self.parser = parser
 
     def check_active_hosts(self):
         for host in self.hosts:
@@ -113,12 +115,13 @@ class RequestsManager:
             if target.up_to_date:
                 return
             target.up_to_date = True
+            await target.replace_all_variables(self.parser)
+            await target.process_dependencies(self.parser)
 
+        target.replace_special_vars()
         dependency_builds = []
         for dependency in target.dependencies_targets:
             dependency_builds.append(self.build_target(dependency, session))
-
-        print("Waiting for dependencies to build")
 
         await asyncio.gather(*dependency_builds)
 

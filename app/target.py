@@ -59,20 +59,21 @@ class BuildTarget:
             new_bash_commands.append(updated_command)
         self.bash_commands = new_bash_commands
 
-    @staticmethod
-    def build_targets_dependencies(targets: List['BuildTarget']):
-        # Modifies the input data, be careful
-        target_by_name = {file: target for target in targets for file in target.target_files}
-        if len(target_by_name) != len(targets):
-            raise ParseError("Error! Two targets have the same name...")
-        for target in targets:
-            dependencies_files = []
-            for dependency in target.dependencies_files_only:
-                if dependency in target_by_name:
-                    target.dependencies_targets.append(target_by_name[dependency])
-                else:
-                    dependencies_files.append(dependency)
-            target.dependencies_files_only = dependencies_files
+    def replace_special_vars(self):
+        replaces = {
+            r'\$@': self.target_files[0],
+            r'\$\*': os.path.splitext(self.target_files[0])[0].split('.')[0],
+            r'\$\<': self.all_dependency_files[0] if self.all_dependency_files else '',
+            r'\$\^': ' '.join(set(self.all_dependency_files)),
+            r'\$\+': ' '.join(self.all_dependency_files),
+            r'\$\(@D\)': os.path.dirname(self.target_files[0]),
+            r'\$\(@F\)': self.target_files[0].split('/')[-1].split('.')[0]
+        }
+        for i in range(len(self.bash_commands)):
+            for replace in replaces:
+                self.bash_commands[i] = re.sub(fr'{replace}', replaces[replace], self.bash_commands[i])
+
+
 
     @staticmethod
     def target_by_filename(name: str, targets: List['BuildTarget']) -> 'BuildTarget' or None:
@@ -90,3 +91,31 @@ class BuildTarget:
         self.bash_commands = list(map(lambda x: f' {x} ', self.bash_commands))  # Wrap each command into spaces
         for i in range(len(self.bash_commands)):
             self.bash_commands[i] = re.sub(rf'\s{pattern}\s', f' {value} ', self.bash_commands[i])
+
+    async def process_dependencies(self, parser):
+        self.dependencies_targets = []
+        self.dependencies_files_only = []
+        for dependency in self.all_dependency_files:
+            if target_dep := parser.get_target_by_filename(dependency):
+                self.dependencies_targets.append(target_dep)
+            else:
+                self.dependencies_files_only.append(dependency)
+
+    async def _replace_var_in_list(self, files_list: list, parser):
+        updated_list = []
+        for file in files_list:
+            if match := re.match(r"\$[{(](.*?)[})]", file):
+                # Take variable, calculate expression and add all the files to dependency files
+                updated_list.extend(map(lambda x: x.strip(),
+                                        parser.calculate_expression(parser.variables[match.groups('0')[0]].split(''))))
+            else:
+                updated_list.append(file)
+
+        files_list.clear()
+        files_list.extend(updated_list)
+
+    async def replace_all_variables(self, parser):
+        await self._replace_var_in_list(self.all_dependency_files, parser)
+        await self.process_dependencies(parser)
+        for i in range(len(self.bash_commands)):
+            self.bash_commands[i] = parser.calculate_expression(self.bash_commands[i])

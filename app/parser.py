@@ -20,8 +20,20 @@ class Parser:
             if target_name in target.target_files:
                 self.default_target = target
 
-    def parse(self):
-        pass
+    def replace_all_variables(self):
+        for i in range(len(self.lines)):
+            for variable in self.variables:
+                self.lines[i] = re.sub(r"^\s*\$[{(]" + variable + r"[})]:",
+                                       f'{self.calculate_expression(self.variables[variable])}:',
+                                       self.lines[i])
+                self.lines[i] = re.sub(r"\$[{(]" + variable + r"[})]", self.variables[variable], self.lines[i])
+
+    def get_target_by_filename(self, name: str) -> BuildTarget or None:
+        for target in self.targets:
+            for file in target.target_files:
+                if file == name:
+                    return target
+        return None
 
     def normalize_text(self):
         self.lines = [re.sub(r"\\(.)", r'\g<1>', line) for line in self.lines]
@@ -95,7 +107,6 @@ class Parser:
 
         if self.default_target is None:
             self.default_target = targets[0]
-        BuildTarget.build_targets_dependencies(targets)
         self.targets = targets
 
     @staticmethod
@@ -110,5 +121,3 @@ class Parser:
         if exit_code != 0:
             return False, output
         return True, output
-
-
