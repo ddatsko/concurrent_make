@@ -1,8 +1,12 @@
-#  Directories, libraries from which may be substituted with ones from server
-substitutable_lib_dirs = ('/usr/local/lib',)
+MAKEFILE: str = 'concurrent_makefile'
 
-libraries_host_path = '/api/v1/libraries'
+# Be careful. The path os from this directory (not the one you run the program). You`d better not touch this
+HOSTS_FILE: str = 'hosts'
 
-check_host_path = '/api/v1/check'
+# If files dependencies should be checked and extended by running "$ g++ -M" and
+# "$ ldd <library>" for finding out all the libraries, the one depends on
+CHECK_MORE_DEPENDENCIES: bool = True
 
-build_host_path = '/api/v1/build'
+# Timeout (In SECONDS!!) of websocket to receive a complete response. If the server does not respond after
+# this timout, connection with it will be closed. None means wait forever.
+RECEIVE_TIMEOUT: float or None = None

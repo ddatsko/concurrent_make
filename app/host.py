@@ -1,12 +1,13 @@
-import aiohttp
-import json
 from errors import ConnectionError
-import asyncio
-from target import BuildTarget
-import tempfile
-import os
 from compressor import Compressor
 from runner import CommandRunner
+from target import BuildTarget
+import tempfile
+import aiohttp
+import asyncio
+import config
+import json
+import os
 
 
 class Host:
@@ -37,7 +38,8 @@ class Host:
                     await self.get_server_info()
                     this_computer_architecture = CommandRunner('/').run_one_command('uname -m').strip()
                     if this_computer_architecture != self.architecture:
-                        print(f"Host {self.address} has architecture {self.architecture}, which is not te same as yours ({this_computer_architecture})")
+                        print(
+                            f"Host {self.address} has architecture {self.architecture}, which is not te same as yours ({this_computer_architecture})")
                         return False
                 return True
             except Exception as e:
@@ -59,7 +61,7 @@ class Host:
 
     async def get_archive(self, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
         try:
-            resp = await session.post(url=self.address + self.BUILD_ENDPOINT, data=data)
+            resp = await session.post(url=self.address + self.BUILD_ENDPOINT, data=data, receive_timeout=config.RECEIVE_TIMEOUT)
         except ConnectionError as e:
             print(e)
             raise e

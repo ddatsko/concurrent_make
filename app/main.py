@@ -5,21 +5,28 @@ import asyncio
 import subprocess as sp
 from errors import ExecutionError
 import os.path
+import config
+import argparse
 
-file = 'concurrent_makefile'
-hosts_file = os.path.join(os.path.dirname(__file__), 'hosts')
+parser = argparse.ArgumentParser(description='Concurrent makefile v1.0')
+parser.add_argument('--file', default='', dest='file', help='File with configuration (similar to Makefile)')
+parser.add_argument('--hosts', default='', dest='hosts', help='File with hosts for building')
+parser.add_argument('--max-timeout', type=float, default=None, dest='timeout', help='Maximum waiting time (in seconds)'
+                                                                                    'for host to build a target')
+
+hosts_file = os.path.join(os.path.dirname(__file__), config.HOSTS_FILE)
 
 
 async def main():
     # Check the file with GNU make
-    check_result = sp.Popen(f'make -n -f {file}', stderr=sp.PIPE, shell=True)
+    check_result = sp.Popen(f'make -n -f {config.MAKEFILE}', stderr=sp.PIPE, shell=True)
     output = check_result.communicate()[1]
     if check_result.returncode != 0:
         print("File seems to be of bad format")
         print(str(output))
         exit(1)
 
-    lines = open(file, 'r').readlines()
+    lines = open(config.MAKEFILE, 'r').readlines()
     p = Parser(lines)
     p.replace_all_variables()
     p.get_build_targets()
@@ -31,4 +38,11 @@ async def main():
 
 
 if __name__ == "__main__":
+    args = parser.parse_args()
+    if args.file:
+        config.MAKEFILE = args.file
+    if args.hosts:
+        hosts_file = args.hosts
+    if args.timeout:
+        config.RECEIVE_TIMEOUT = args.timeout
     asyncio.run(main())

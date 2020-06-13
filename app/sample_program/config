@@ -1,0 +1,27 @@
+# This is the configuration file
+# You can use comments by typing #
+# Blank lines are also acceptable
+
+# BUT NOTE:
+# You may not change the order of the fields or remove them  !!!!
+
+# Number of threads to use (int) 1 <= threads <= 100
+num_of_threads=2
+
+# Absolute error (double)
+abs_error=0.0001
+
+# Relative error (double in percent) 0.00 - 1.00
+rel_error=0.000001026
+
+# Starting point of x coordinate (double)
+x_start=-100
+
+# End point of x coordinate (double)
+x_end=100
+
+# Start point of y coordinate (double)
+y_start=-100
+
+# End point of y coordinate (double)
+y_end=100

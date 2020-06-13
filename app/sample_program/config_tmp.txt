@@ -1,0 +1,7 @@
+num_of_threads=5
+abs_error=0.1
+rel_error=1e-11
+x_start=-100
+x_end=100
+y_start=-100
+y_end=100
