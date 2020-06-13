@@ -5,3 +5,10 @@
 **.tmp
 **.tar.**
 **.o
+
+server/Dockerfile_arm
+
+app/sample_program/tbb
+
+server/tbb-2020.2-lin.tgz
+

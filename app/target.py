@@ -73,8 +73,6 @@ class BuildTarget:
             for replace in replaces:
                 self.bash_commands[i] = re.sub(fr'{replace}', replaces[replace], self.bash_commands[i])
 
-
-
     @staticmethod
     def target_by_filename(name: str, targets: List['BuildTarget']) -> 'BuildTarget' or None:
         for target in targets:

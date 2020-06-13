@@ -1,5 +1,4 @@
 from target import BuildTarget
-import urllib3
 import aiohttp
 from compressor import Compressor
 import os
@@ -8,55 +7,58 @@ import asyncio
 from errors import ParseError, ExecutionError
 import config
 from parser import Parser
+from host import Host
 
 
 class RequestsManager:
-    def __init__(self, default_target: BuildTarget, hosts_filename, compressor: Compressor, parser: Parser):
+    @classmethod
+    async def create(cls, default_target: BuildTarget, hosts_filename: str, compressor: Compressor,
+                     parser: Parser) -> 'RequestsManager':
+        new_manager = RequestsManager(default_target, hosts_filename, compressor, parser)
+        await new_manager.check_active_hosts()
+        return new_manager
+
+    def __init__(self, default_target: BuildTarget, hosts_filename: str, compressor: Compressor, parser: Parser):
         self.compressor = compressor
         self.root_target = default_target
+        self.hosts = []
         try:
-            self.hosts = open(hosts_filename).readlines()
+            hosts_file_lines = open(hosts_filename).readlines()
+            for line in hosts_file_lines:
+                try:
+                    self.hosts.append(Host(line.split()[0], line.split()[1]))
+                except KeyError:
+                    pass
         except FileNotFoundError:
             raise FileNotFoundError(f"Error! Hosts file cannot be found")
         self.active_hosts = []
-        self.available_hosts = set()
-        self.busy_hosts = set()
-        self.http = urllib3.PoolManager()
-        self.check_active_hosts()
+        self.available_hosts = []
+        self.busy_hosts = []
         self.lock = asyncio.Lock()
         self.host_cond_var = asyncio.Condition()
         self.parser = parser
 
-    def check_active_hosts(self):
+    async def check_active_hosts(self):
         for host in self.hosts:
-            try:
-                response = self.http.request('get', host + config.check_host_path)
-                if response.data.decode('utf-8') == 'OK':
-                    self.active_hosts.append(host)
-                    print(host)
-            except urllib3.exceptions.MaxRetryError:
-                pass
-            except Exception as e:
-                print(f'Error in checking host {host}: {e}')
+            if await host.is_available():
+                self.active_hosts.append(host)
+                self.available_hosts.append(host)
 
-        self.available_hosts = set(self.active_hosts)
-
-    async def get_available_host(self):
+    async def get_available_host(self) -> Host:
         async with self.host_cond_var:
             if len(self.available_hosts) == 0:
                 await self.host_cond_var.wait()
             host = self.available_hosts.pop()
-            self.busy_hosts.add(host)
+            self.busy_hosts.append(host)
             return host
 
-    async def release_host(self, host: str):
+    async def release_host(self, host: Host):
         async with self.host_cond_var:
-            self.available_hosts.add(host)
+            self.available_hosts.append(host)
             self.busy_hosts.remove(host)
             self.host_cond_var.notify(n=1)
 
     async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> bytes:
-
         # Acquire the lock to get a temporary file
         async with self.lock:
             data = aiohttp.FormData()
@@ -86,27 +88,15 @@ class RequestsManager:
             commands_file.close()
 
         # Lock is released
-        result = await self.get_archive(host, data, session)
+        result = await host.get_archive(data, session)
         await self.release_host(host)
 
         async with self.lock:
             await Compressor.extract_files(result)
-
         return result
 
-    async def get_archive(self, host: str, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
-        try:
-            resp = await session.post(url=host + config.build_host_path, data=data)
-            if resp.status != 200:
-                raise ExecutionError("", str(await resp.read()))
-        except ExecutionError as e:
-            print(e)
-            raise e
-        data = await resp.content.read()
-        return data
-
     async def build_targets(self):
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
             await self.build_target(self.root_target, session)
 
     async def build_target(self, target: BuildTarget, session: aiohttp.ClientSession):

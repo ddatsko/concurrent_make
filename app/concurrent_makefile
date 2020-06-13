@@ -1,11 +1,10 @@
 CXX = g++
 COMPILE_FLAGS = -O3
 
-sample_program/main: sample_program/main.o sample_program/greet.o sample_program/greet.h
-	$(CXX) -o sample_program/main sample_program/main.o sample_program/greet.o
+sample_program/main: sample_program/main.o sample_program/tbb/task_group.h /usr/local/lib/libtbb.so /usr/local/lib/libtbb.so.2
+	$(CXX) -o sample_program/main sample_program/main.o /usr/local/lib/libtbb.so /usr/local/lib/libtbb.so.2
 
-sample_program/main.o: sample_program/main.cpp sample_program/greet.h
-	$(CXX) -c -o sample_program/main.o sample_program/main.cpp $(COMPILE_FLAGS)
 
-sample_program/greet.o: sample_program/greet.cpp sample_program/greet.h
-	$(CXX) -c -o sample_program/greet.o sample_program/greet.cpp $(COMPILE_FLAGS)
+sample_program/main.o: sample_program/tbb/task_group.h sample_program/main.cpp sample_program
+	${CXX} -c -o sample_program/main.o -I sample_program sample_program/main.cpp
+

@@ -2,10 +2,12 @@ import os
 import re
 import sys
 import subprocess as sp
+from Library import Library
+from typing import List
 
 
 class CommandRunner:
-    def __init__(self, root_dir: str, present_libraries: dict):
+    def __init__(self, root_dir: str, present_libraries: List[Library]):
         self.root_dir = root_dir
         self.present_libraries = present_libraries
 
@@ -20,11 +22,14 @@ class CommandRunner:
 
             # Considering that all the paths were substitute for the absolute ones
             lines = [re.sub(r'\s/', f' {abs_paths_root}', line) for line in open(commands_file).readlines()]
+            print("Lines Before: ", lines)
             for i in range(len(lines)):
-                # TODO: reqrite this for thanging with regex
-                # NOTE!!: THIS IS HARDCODED AS I HAVENT ENOUGH TIME
-                lines[i] = re.sub(r'\${.*}', '/usr/local/lib/libboost_thread.so.1.72.0', lines[i])
+                # TODO: rewrite this for changing with regex
+                for library in re.findall(r'\${(.*?)}', lines[i]):
+                    lines[i] = re.sub(r'\${' + library + '}',
+                                      Library.find_library_in_list(library, self.present_libraries).abs_path, lines[i])
 
+            print("Lines After: ", lines)
             for command in lines:
                 r = sp.Popen(command, shell=True, stderr=sp.PIPE)
                 sys.stderr.write(str(r.communicate()[1]))
@@ -42,3 +47,13 @@ class CommandRunner:
         finally:
             os.chdir(cur_dir)
         return '\n'.join(res), 0
+
+    @staticmethod
+    def run_one_command(command: str):
+        check_result = sp.Popen(command, stdout=sp.PIPE, shell=True)
+        output = check_result.communicate()[0].decode('utf-8')
+        if check_result.returncode != 0:
+            print("Command seems to be wrong")
+            print(str(output))
+            return ''
+        return output

@@ -1,11 +1,12 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, make_response
 import tempfile
 from runner import CommandRunner
 from compressor import Compressor
-from Library import Library, find_libraries
+from Library import Library
 from errors import InvalidLibraryFileName
 import json
-import sys
+from hashlib import sha256
+from utils import check_password, find_libraries
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploaded_files'
@@ -14,9 +15,19 @@ app.config['LIBRARIES_DIRECTORIES'] = ['/usr/lib/x86_64-linux-gnu/libfakeroot', 
                                        '/lib/x86_64-linux-gnu', '/usr/lib/x86_64-linux-gnu', '/lib32', '/usr/lib32']
 
 
-@app.route('/api/v1/check')
+@app.route('/api/v1/check', methods=['POST'])
 def main_page():
-    return 'OK'
+    find_libraries()
+    try:
+        data = json.loads(request.data)
+        password = bytes(data['password'], encoding='utf-8')
+        hashed_password = sha256(password).hexdigest()
+        if hashed_password in [line.strip() for line in open('allowed_passwords', 'r').readlines()]:
+            return 'OK'
+    except Exception as e:
+        # Want to avoid not 200 requests as they will raise an error on the other side
+        print(e)
+    return 'NOT OK'
 
 
 @app.route('/api/v1/libraries', methods=['POST'])
@@ -32,9 +43,22 @@ def get_present_libraries():
     return jsonify({'present_libraries': present_libraries})
 
 
+@app.route('/api/v1/all_libraries')
+def all_libraries():
+    return jsonify([library.name for library in app.config['LIBRARIES']])
+
+
+@app.route('/api/v1/get_info', methods=['POST'])
+def get_info():
+    try:
+        return jsonify({'architecture': CommandRunner.run_one_command('uname -m').strip()})
+    except Exception as e:
+        print(e)
+        return jsonify({})
+
+
 @app.route('/api/v1/build', methods=['POST'])
 def build():
-
     print(request.form)
     # Extracting files
     tempdir = tempfile.TemporaryDirectory()
@@ -77,5 +101,5 @@ def build():
 
 
 if __name__ == "__main__":
-    app.config['LIBRARIES'] = find_libraries(app.config['LIBRARIES_DIRECTORIES'])
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    app.config['LIBRARIES'] = find_libraries()
+    app.run(host='0.0.0.0', port=3000, debug=True, ssl_context='adhoc')

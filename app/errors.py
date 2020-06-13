@@ -13,3 +13,6 @@ class ExecutionError(Exception):
     def __str__(self):
         return self.__repr__()
 
+
+class ConnectionError(Exception):
+    pass

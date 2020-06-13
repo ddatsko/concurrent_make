@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, Set
+from typing import Iterable, Dict, Set, List
 import os
 import re
 from errors import InvalidLibraryFileName
@@ -19,12 +19,10 @@ class Library:
 
         try:
             self.version = tuple(map(int, match.groups('0')[1].strip('.').split('.')))
-        except:
+        except Exception as e:
+            print(e)
             self.version = (0,)
         self.abs_path = os.path.abspath(path_to_file)
-
-    def __hash__(self):
-        return self.name.__hash__()
 
     def __eq__(self, other: 'Library'):
         if self.name != other.name:
@@ -38,24 +36,17 @@ class Library:
         for i in range(len(version1)):
             if version1[i] < version2[i]:
                 return False
-
         return True
 
     def __repr__(self):
         return f"Library(name={self.name}, path={self.abs_path}, version={'.'.join(map(str, self.version))})\n"
 
+    @staticmethod
+    def find_library_in_list(library_name: str, libraries: List['Library']) -> 'Library' or None:
+        looked_library = Library(library_name)
+        for library in libraries:
+            if looked_library == library:
+                return library
 
-def find_libraries(directories: Iterable[str]) -> Set[Library]:
-    res = set()
-    for path in directories:
-        if not path.endswith('/'):
-            path += '/'
-        if not os.path.isdir(path):
-            continue
-        for file in os.listdir(path):
-            try:
-                library = Library(path + file)
-                res.add(library)
-            except InvalidLibraryFileName:
-                continue
-    return res
+
+

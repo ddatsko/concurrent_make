@@ -16,13 +16,13 @@ async def main():
         print("File seems to be of bad format")
         print(str(output))
         exit(1)
-        
+
     lines = open(file, 'r').readlines()
     p = Parser(lines)
     p.replace_all_variables()
     p.get_build_targets()
 
-    rm = RequestsManager(p.default_target, hosts_file, Compressor(), p)
+    rm = await RequestsManager.create(p.default_target, hosts_file, Compressor(), p)
     await rm.build_targets()
 
 
