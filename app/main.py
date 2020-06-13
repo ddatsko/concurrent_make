@@ -3,9 +3,11 @@ from compressor import Compressor
 from requests_manager import RequestsManager
 import asyncio
 import subprocess as sp
+from errors import ExecutionError
+import os.path
 
 file = 'concurrent_makefile'
-hosts_file = 'hosts'
+hosts_file = os.path.join(os.path.dirname(__file__), 'hosts')
 
 
 async def main():
@@ -21,9 +23,11 @@ async def main():
     p = Parser(lines)
     p.replace_all_variables()
     p.get_build_targets()
-
     rm = await RequestsManager.create(p.default_target, hosts_file, Compressor(), p)
-    await rm.build_targets()
+    try:
+        await rm.build_targets()
+    except ExecutionError as e:
+        print(e.commands_output, e.message)
 
 
 if __name__ == "__main__":

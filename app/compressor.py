@@ -5,7 +5,7 @@ import tempfile
 
 
 class Compressor:
-    def __init__(self, root_path: str = '.'):
+    def __init__(self, root_path: str = os.getcwd()):
         self.root_path = root_path if root_path.endswith('/') else root_path + '/'
 
     def compress(self, files: Iterable[str], output_file_name: str):
@@ -23,7 +23,7 @@ class Compressor:
 
     @staticmethod
     async def extract_files(buffer: bytes):
-        tmp_archive = tempfile.NamedTemporaryFile(suffix='tar.xz', prefix=os.getcwd())
+        tmp_archive = tempfile.NamedTemporaryFile(suffix='tar.xz', prefix=os.path.dirname(__file__))
         archive_name = tmp_archive.name
         with open(archive_name, 'wb') as file:
             file.write(buffer)

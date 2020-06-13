@@ -5,8 +5,7 @@ from compressor import Compressor
 from Library import Library
 from errors import InvalidLibraryFileName
 import json
-from hashlib import sha256
-from utils import check_password, find_libraries
+from utils import is_password_acceptable, find_libraries
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploaded_files'
@@ -17,12 +16,9 @@ app.config['LIBRARIES_DIRECTORIES'] = ['/usr/lib/x86_64-linux-gnu/libfakeroot', 
 
 @app.route('/api/v1/check', methods=['POST'])
 def main_page():
-    find_libraries()
     try:
         data = json.loads(request.data)
-        password = bytes(data['password'], encoding='utf-8')
-        hashed_password = sha256(password).hexdigest()
-        if hashed_password in [line.strip() for line in open('allowed_passwords', 'r').readlines()]:
+        if is_password_acceptable(data['password']):
             return 'OK'
     except Exception as e:
         # Want to avoid not 200 requests as they will raise an error on the other side
@@ -33,24 +29,29 @@ def main_page():
 @app.route('/api/v1/libraries', methods=['POST'])
 def get_present_libraries():
     present_libraries = []
-    print(request.json)
+    print(request.json.replace("'", '"'))
     for library in json.loads(request.json.replace("'", '"'))['needed_libraries']:
         try:
-            if Library(library) in app.config['LIBRARIES']:
-                present_libraries.append(library)
+            for present_lib in app.config['LIBRARIES']:
+                if present_lib >= Library(library):
+                    present_libraries.append(library)
         except InvalidLibraryFileName:
             continue
     return jsonify({'present_libraries': present_libraries})
 
 
-@app.route('/api/v1/all_libraries')
+@app.route('/api/v1/all_libraries', methods=['GET', 'POST'])
 def all_libraries():
-    return jsonify([library.name for library in app.config['LIBRARIES']])
+    return jsonify([library.path for library in app.config['LIBRARIES']])
 
 
 @app.route('/api/v1/get_info', methods=['POST'])
 def get_info():
+
     try:
+        data = json.loads(request.data)
+        if not is_password_acceptable(data['password']):
+            return jsonify({})
         return jsonify({'architecture': CommandRunner.run_one_command('uname -m').strip()})
     except Exception as e:
         print(e)
@@ -60,6 +61,9 @@ def get_info():
 @app.route('/api/v1/build', methods=['POST'])
 def build():
     print(request.form)
+    password = request.form['password']
+    if not is_password_acceptable(password):
+        return make_response('', 400)
     # Extracting files
     tempdir = tempfile.TemporaryDirectory()
     print(request.files)
@@ -69,6 +73,7 @@ def build():
 
     archive_file = tempfile.NamedTemporaryFile(suffix='.tar.xz', dir=tempdir.name)
     archive_filename = archive_file.name.split('/')[-1]
+    print(archive_filename)
 
     f.save(archive_file.name)
 

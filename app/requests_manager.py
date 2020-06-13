@@ -2,12 +2,12 @@ from target import BuildTarget
 import aiohttp
 from compressor import Compressor
 import os
-import tempfile
 import asyncio
 from errors import ParseError, ExecutionError
-import config
 from parser import Parser
 from host import Host
+from host_local import HostLocal
+from typing import List
 
 
 class RequestsManager:
@@ -31,9 +31,9 @@ class RequestsManager:
                     pass
         except FileNotFoundError:
             raise FileNotFoundError(f"Error! Hosts file cannot be found")
-        self.active_hosts = []
-        self.available_hosts = []
-        self.busy_hosts = []
+        self.active_hosts: List[Host] = [HostLocal()]
+        self.available_hosts: List[Host] = [HostLocal()]
+        self.busy_hosts: List[Host] = []
         self.lock = asyncio.Lock()
         self.host_cond_var = asyncio.Condition()
         self.parser = parser
@@ -43,6 +43,14 @@ class RequestsManager:
             if await host.is_available():
                 self.active_hosts.append(host)
                 self.available_hosts.append(host)
+
+    async def get_local_host(self) -> Host:
+        async with self.host_cond_var:
+            while len(self.available_hosts) == 0 or not isinstance(self.available_hosts[0], HostLocal):
+                await self.host_cond_var.wait()
+            host = self.available_hosts.pop(0)
+            self.busy_hosts.append(host)
+            return host
 
     async def get_available_host(self) -> Host:
         async with self.host_cond_var:
@@ -54,46 +62,30 @@ class RequestsManager:
 
     async def release_host(self, host: Host):
         async with self.host_cond_var:
-            self.available_hosts.append(host)
+            if isinstance(host, HostLocal):
+                self.available_hosts.insert(0, host)
+            else:
+                self.available_hosts.append(host)
             self.busy_hosts.remove(host)
             self.host_cond_var.notify(n=1)
 
-    async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> bytes:
+    async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> None:
         # Acquire the lock to get a temporary file
-        async with self.lock:
-            data = aiohttp.FormData()
-            archive_file = tempfile.NamedTemporaryFile(suffix='tar.xz')
-            commands_file = tempfile.NamedTemporaryFile(suffix='.sh')
-            target.substitute_for_absolute_paths('/')
-            data.add_field('workdir', os.getcwd())
-            data.add_field('targets', ', '.join(target.target_files))
-            data.add_field('commands_file', commands_file.name)
-
         host = await self.get_available_host()
-        response = await session.post(url=f'{host}{config.libraries_host_path}',
-                                      json=f'{{"needed_libraries": {[file for file in target.all_dependency_files if file.startswith(config.substitutable_lib_dirs)]}}}')
-        present_libraries = (await response.json())['present_libraries']
-
-        async with self.lock:
-            for library in present_libraries:
-                await target.replace_in_commands(library, f'${{{library.split("/")[-1]}}}')
-            await target.create_commands_file(commands_file.name)
-
-            self.compressor.compress([file for file in target.all_dependency_files if file not in present_libraries]
-                                     + [commands_file.name], archive_file.name)
-            data.add_field('file',
-                           open(archive_file.name, 'rb'),
-                           filename=archive_file.name.split('/')[-1])
-            archive_file.close()
-            commands_file.close()
-
-        # Lock is released
-        result = await host.get_archive(data, session)
-        await self.release_host(host)
-
-        async with self.lock:
-            await Compressor.extract_files(result)
-        return result
+        try:
+            await host.get_compiled_file(session, target, self.lock, self.compressor)
+            await self.release_host(host)
+        except Exception as e:
+            print("Failed to build target... Trying to build on local computer")
+            if await host.is_available():
+                await self.release_host(host)
+            localhost = await self.get_local_host()
+            try:
+                await localhost.get_compiled_file(session, target, self.lock, self.compressor)
+                await self.release_host(localhost)
+            except ExecutionError as e:
+                print('Unable to build the target on local computer too...')
+                raise e
 
     async def build_targets(self):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
@@ -132,5 +124,4 @@ class RequestsManager:
         if up_to_date and newest_time < target.get_latest_modification_time() and target.targets_exist():
             target.up_to_date = True
         else:
-            print("Waiting for a compiled file...")
             await self.get_compiled_file(session, target)

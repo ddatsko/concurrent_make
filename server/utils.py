@@ -1,13 +1,13 @@
 from hashlib import sha256
 from typing import List
 from Library import Library
-from runner import CommandRunner
-import os
 import subprocess as sp
 
 
-def check_password(password: str):
-    pass
+def is_password_acceptable(password: str) -> bool:
+    password = bytes(password, encoding='utf-8')
+    hashed_password = sha256(password).hexdigest()
+    return hashed_password in [line.strip() for line in open('allowed_passwords').readlines()]
 
 
 def find_libraries() -> List[Library]:

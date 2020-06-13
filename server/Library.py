@@ -18,13 +18,17 @@ class Library:
         self.name = match.groups('0')[0]
 
         try:
-            self.version = tuple(map(int, match.groups('0')[1].strip('.').split('.')))
+            version_numbers = match.groups('0')[1].strip('.').split('.')
+            if version_numbers[0]:
+                self.version = tuple(map(int, version_numbers))
+            else:
+                self.version = (0,)
         except Exception as e:
             print(e)
             self.version = (0,)
         self.abs_path = os.path.abspath(path_to_file)
 
-    def __eq__(self, other: 'Library'):
+    def __ge__(self, other: 'Library'):
         if self.name != other.name:
             return False
         if len(self.version) > len(other.version):
@@ -45,7 +49,7 @@ class Library:
     def find_library_in_list(library_name: str, libraries: List['Library']) -> 'Library' or None:
         looked_library = Library(library_name)
         for library in libraries:
-            if looked_library == library:
+            if library >= looked_library:
                 return library
 
 

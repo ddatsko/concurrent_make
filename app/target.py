@@ -13,6 +13,7 @@ class BuildTarget:
         self.dependencies_files_only = dependencies_files.copy() if dependencies_files else []
         self.all_dependency_files = self.dependencies_files_only.copy()
         self.bash_commands = bash_commands.copy() if bash_commands else []
+        self.initial_bash_commands = bash_commands.copy() if bash_commands else []
         self.ready = ready
         self.up_to_date = False
         self.dependencies_targets = []
@@ -72,6 +73,7 @@ class BuildTarget:
         for i in range(len(self.bash_commands)):
             for replace in replaces:
                 self.bash_commands[i] = re.sub(fr'{replace}', replaces[replace], self.bash_commands[i])
+        self.initial_bash_commands = self.bash_commands.copy()
 
     @staticmethod
     def target_by_filename(name: str, targets: List['BuildTarget']) -> 'BuildTarget' or None:
@@ -117,3 +119,4 @@ class BuildTarget:
         await self.process_dependencies(parser)
         for i in range(len(self.bash_commands)):
             self.bash_commands[i] = parser.calculate_expression(self.bash_commands[i])
+        self.initial_bash_commands = self.bash_commands.copy()
