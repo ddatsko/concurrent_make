@@ -2,6 +2,9 @@ from typing import List
 from errors import ParseError
 import os
 import re
+import config
+from runner import CommandRunner
+import subprocess as sp
 
 
 class BuildTarget:
@@ -118,3 +121,42 @@ class BuildTarget:
         for i in range(len(self.bash_commands)):
             self.bash_commands[i] = parser.calculate_expression(self.bash_commands[i])
         self.initial_bash_commands = self.bash_commands.copy()
+
+    async def get_libraries_dependencies(self):
+        if not config.CHECK_MORE_DEPENDENCIES:
+            return
+        dependencies_libraries = {file for file in self.dependencies_files_only if file.endswith('.so') or '.so.' in file}
+        added = len(dependencies_libraries) != 0
+        while added:
+            new_dependencies = set()
+            added = False
+            for library in dependencies_libraries:
+                library_dir = os.path.dirname(library)
+                library_filename = library.split('/')[-1]
+
+                # check symlinks
+                try:
+                    result = CommandRunner(os.getcwd()).run_one_command(f'ls {library_dir} -la | grep {library_filename}')
+                    if '->' in result:
+                        lib = result.split(' -> ')[1].strip()
+                        if not lib.startswith('/'):
+                            lib = library_dir + '/' + result.split(' -> ')[1].strip()
+                        if lib not in dependencies_libraries:
+                            new_dependencies.add(lib)
+                            added = True
+                except:
+                    pass
+
+                try:
+                    result = CommandRunner(os.getcwd()).run_one_command(f'ldd {library}')
+                    for line in result.splitlines():
+                        if match := re.match(r'.*\s(/.+?)\s', line):
+                            if match.groups('0')[0] not in dependencies_libraries:
+                                new_dependencies.add(match.groups('0')[0])
+                                added = True
+                except:
+                    pass
+            for library in new_dependencies:
+                dependencies_libraries.add(library)
+        self.dependencies_files_only = list(set(self.dependencies_files_only).union(dependencies_libraries))
+        self.all_dependency_files = list(set(self.all_dependency_files).union(dependencies_libraries))

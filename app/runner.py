@@ -12,11 +12,11 @@ class CommandRunner:
         try:
             os.chdir(self.root_dir)
             check_result = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE, shell=True)
-            output = check_result.communicate()[0].decode('utf-8')
+            res = check_result.communicate()
             if check_result.returncode != 0:
                 print("Command seems to be wrong")
-                raise ExecutionError(f'Command: {command}', f"STDOUT: {check_result.communicate()[0].decode('utf-8')}\n"
-                                                            f"STDERR: {check_result.communicate()[1].decode('utf-8')}")
-            return output
+                raise ExecutionError(f'Command: {command}', f"STDOUT: {res[0].decode('utf-8')}\n"
+                                                            f"STDERR: {res[1].decode('utf-8')}")
+            return res[0].decode('utf-8')
         finally:
             os.chdir(cur_dir)
