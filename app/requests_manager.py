@@ -72,10 +72,30 @@ class RequestsManager:
             self.busy_hosts.remove(host)
             self.host_cond_var.notify(n=1)
 
+    async def get_best_host(self, target: BuildTarget) -> Host:
+        async with self.host_cond_var:
+            if len(self.available_hosts) == 0:
+                await self.host_cond_var.wait()
+            if len(self.available_hosts) == 1:
+                host = self.available_hosts.pop()
+            else:
+                best_host_index = 1
+                i = 1
+                max_libraries = 0
+                for host in self.available_hosts[1:]:
+                    found_libraries = len(await host.get_present_libraries(target))
+                    if found_libraries > max_libraries:
+                        max_libraries = found_libraries
+                        best_host_index = i
+                    i += 1
+                host = self.available_hosts[best_host_index]
+            self.busy_hosts.append(host)
+            return host
+
     async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> None:
         # Acquire the lock to get a temporary file
         await target.get_libraries_dependencies()
-        host = await self.get_available_host()
+        host = await self.get_best_host(target)
         try:
             await host.get_compiled_file(session, target, self.lock, self.compressor)
             await self.release_host(host)

@@ -72,6 +72,15 @@ class Host:
         data = await resp.content.read()
         return data
 
+    async def get_present_libraries(self, target: BuildTarget) -> List[str]:
+        present_libraries = []
+        for file in target.all_dependency_files:
+            if file.endswith('.so') or '.so.' in file:
+                if Library.find_library_in_list(file, self.libraries):
+                    present_libraries.append(file)
+        return present_libraries
+
+
     async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget, lock: asyncio.Lock,
                                 compressor: Compressor):
         print(f"Waiting for a compiled file from {self.address}")
@@ -96,12 +105,7 @@ class Host:
                 except:
                     continue
 
-        present_libraries = []
-        for file in target.all_dependency_files:
-            if file.endswith('.so') or '.so.' in file:
-                if Library.find_library_in_list(file, self.libraries):
-                    present_libraries.append(file)
-
+        present_libraries = await self.get_present_libraries(target)
         async with lock:
             for library in present_libraries:
                 await target.replace_in_commands(library, f'${{{library.split("/")[-1]}}}')
