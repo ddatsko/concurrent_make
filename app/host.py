@@ -1,4 +1,4 @@
-from errors import ConnectionError
+from errors import ConnectionError, ExecutionError
 from compressor import Compressor
 from runner import CommandRunner
 from target import BuildTarget
@@ -62,9 +62,10 @@ class Host:
     async def get_archive(self, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
         try:
             resp = await asyncio.wait_for(session.post(url=self.address + self.BUILD_ENDPOINT, data=data), timeout=config.RECEIVE_TIMEOUT)
-        except Exception as e:
-            print(e)
-            raise e
+        except Exception:
+            raise ConnectionError()
+        if resp.status != 200:
+            raise ExecutionError('', await resp.text())
         data = await resp.content.read()
         return data
 

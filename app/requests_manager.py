@@ -78,6 +78,20 @@ class RequestsManager:
         try:
             await host.get_compiled_file(session, target, self.lock, self.compressor)
             await self.release_host(host)
+        except ExecutionError as e:
+            print(f"ERROR in running command at remote host '{host.address}. OUTPUT: \n'"
+                  f"-------------------------------------------------------------------\n"
+                  f"{e.commands_output}"
+                  f"\n-------------------------------------------------------------------\n"
+                  f"Trying to build the target locally...")
+            localhost = await self.get_local_host()
+            try:
+                await localhost.get_compiled_file(session, target, self.lock, self.compressor)
+                await self.release_host(localhost)
+            except ExecutionError as e:
+                print('Unable to build the target on local computer too...')
+                raise e
+
         except Exception as e:
             print("Failed to build target... Trying to build on local computer")
             if await host.is_available():

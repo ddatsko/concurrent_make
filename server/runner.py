@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import subprocess as sp
 from Library import Library
 from typing import List
@@ -24,23 +23,20 @@ class CommandRunner:
             lines = [re.sub(r'\s/', f' {abs_paths_root}', line) for line in open(commands_file).readlines()]
             print("Lines Before: ", lines)
             for i in range(len(lines)):
-                # TODO: rewrite this for changing with regex
                 for library in re.findall(r'\${(.*?)}', lines[i]):
                     lines[i] = re.sub(r'\${' + library + '}',
                                       Library.find_library_in_list(library, self.present_libraries).abs_path, lines[i])
 
             print("Lines After: ", lines)
             for command in lines:
-                r = sp.Popen(command, shell=True, stderr=sp.PIPE)
-                sys.stderr.write(str(r.communicate()[1]))
+                r = sp.Popen(command, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+                output = f"Command: {command}" + f"\nSTDOUT: {r.communicate()[0].decode('utf-8')}\n" + \
+                         f"STDERR: {r.communicate()[1].decode('utf-8')}"
 
-                sys.stderr.write(command)
-                command_out = os.popen(command)
-                command_res = command_out.read()
-                exit_code = command_out.close()
-                res.append(command_res)
-                if exit_code:
-                    return '\n'.join(res), exit_code
+                print(output)
+                res.append(output)
+                if r.returncode != 0:
+                    return '\n'.join(res), r.returncode
         except Exception as e:
             print(e)
             pass
