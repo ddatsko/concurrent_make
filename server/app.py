@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, jsonify, make_response
+from flask import Flask, request, send_file, jsonify, make_response, logging
 import tempfile
 from runner import CommandRunner
 from compressor import Compressor
@@ -6,6 +6,7 @@ from Library import Library
 from errors import InvalidLibraryFileName
 import json
 from utils import is_password_acceptable, find_libraries
+import sys
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploaded_files'
@@ -42,12 +43,11 @@ def get_present_libraries():
 
 @app.route('/api/v1/all_libraries', methods=['GET', 'POST'])
 def all_libraries():
-    return jsonify([library.path for library in app.config['LIBRARIES']])
+    return jsonify([library.abs_path for library in app.config['LIBRARIES']])
 
 
 @app.route('/api/v1/get_info', methods=['POST'])
 def get_info():
-
     try:
         data = json.loads(request.data)
         if not is_password_acceptable(data['password']):
@@ -60,6 +60,7 @@ def get_info():
 
 @app.route('/api/v1/build', methods=['POST'])
 def build():
+    logger = logging.create_logger(app)
     print(request.form)
     password = request.form['password']
     if not is_password_acceptable(password):
@@ -86,12 +87,14 @@ def build():
     # Run commands
     print(new_root)
 
-    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'), app.config['LIBRARIES'])
+    # TODO> remove this crap []
+    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'), [])
 
-    output, code = command_runner.run_commands(new_root + commands_file, new_root)
+    output, code = command_runner.run_commands(new_root + commands_file, new_root, logger)
     print(output, code)
     if code != 0:
-        response = output, 400
+        logger.debug(code)
+        response = str(code), 400
     else:
         # Sending files back
         target_files = [target.strip('/') for target in request.form['targets'].split(', ')]

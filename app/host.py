@@ -2,6 +2,8 @@ from errors import ConnectionError, ExecutionError
 from compressor import Compressor
 from runner import CommandRunner
 from target import BuildTarget
+from Library import Library
+from typing import List
 import tempfile
 import aiohttp
 import asyncio
@@ -17,12 +19,12 @@ class Host:
     INFO_ENDPOINT = '/api/v1/get_info'
     BUILD_ENDPOINT = '/api/v1/build'
     ALL_LIBRARIES_ENDPOINT = '/api/v1/all_libraries'
-    CHECK_LIBRARIES_ENDPOINT = '/api/v1/libraries'
 
     def __init__(self, address: str, password: str):
         self.address = address.strip('/')
         self.password = password
         self.architecture = ''
+        self.libraries: List[Library] or None = None
 
     async def is_available(self) -> bool:
         headers = {'content-type': 'application/json'}
@@ -61,7 +63,8 @@ class Host:
 
     async def get_archive(self, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
         try:
-            resp = await asyncio.wait_for(session.post(url=self.address + self.BUILD_ENDPOINT, data=data), timeout=config.RECEIVE_TIMEOUT)
+            resp = await asyncio.wait_for(session.post(url=self.address + self.BUILD_ENDPOINT, data=data),
+                                          timeout=config.RECEIVE_TIMEOUT)
         except Exception:
             raise ConnectionError()
         if resp.status != 200:
@@ -82,9 +85,22 @@ class Host:
             data.add_field('commands_file', commands_file.name)
             data.add_field('password', self.password)
 
-        response = await session.post(url=self.address + self.CHECK_LIBRARIES_ENDPOINT,
-                                      json=f'{{"needed_libraries": {[file for file in target.all_dependency_files if ".so" in file]}, "password": "{self.password}"}}')
-        present_libraries = (await response.json())['present_libraries']
+        if self.libraries is None:
+            self.libraries = []
+            response = await session.post(url=self.address + self.ALL_LIBRARIES_ENDPOINT)
+            libraries = (await response.json())
+            for library in libraries:
+                try:
+                    self.libraries.append(Library(library))
+                except:
+                    continue
+            print('\n'.join([library.name for library in self.libraries]))
+
+        present_libraries = []
+        for file in target.all_dependency_files:
+            if file.endswith('.so') or '.so.' in file:
+                if Library.find_library_in_list(file, self.libraries):
+                    present_libraries.append(file)
 
         async with lock:
             for library in present_libraries:

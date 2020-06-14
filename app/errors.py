@@ -16,3 +16,7 @@ class ExecutionError(Exception):
 
 class ConnectionError(Exception):
     pass
+
+
+class InvalidLibraryFileName(Exception):
+    pass

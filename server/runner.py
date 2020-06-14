@@ -10,35 +10,37 @@ class CommandRunner:
         self.root_dir = root_dir
         self.present_libraries = present_libraries
 
-    def run_commands(self, commands_file: str, abs_paths_root: str) -> (str, int):
+    def run_commands(self, commands_file: str, abs_paths_root: str, logger) -> (str, int):
         """
         :return the name of created file (target)
         """
         cur_dir = os.getcwd()
         res = []
         try:
+            logger.debug("HERE")
             os.chdir(self.root_dir)
 
             # Considering that all the paths were substitute for the absolute ones
             lines = [re.sub(r'\s/', f' {abs_paths_root}', line) for line in open(commands_file).readlines()]
-            print("Lines Before: ", lines)
+            logger.debug("Lines Before: " + '\n'.join(lines))
             for i in range(len(lines)):
                 for library in re.findall(r'\${(.*?)}', lines[i]):
                     lines[i] = re.sub(r'\${' + library + '}',
                                       Library.find_library_in_list(library, self.present_libraries).abs_path, lines[i])
 
-            print("Lines After: ", lines)
+            logger.debug("Lines After: " + '\n'.join(lines))
             for command in lines:
                 r = sp.Popen(command, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
-                output = f"Command: {command}" + f"\nSTDOUT: {r.communicate()[0].decode('utf-8')}\n" + \
-                         f"STDERR: {r.communicate()[1].decode('utf-8')}"
+                out, err = r.communicate()
+                output = f"Command: {command}" + f"\nSTDOUT: {out.decode('utf-8')}\n" + \
+                         f"STDERR: {err.decode('utf-8')}"
 
                 print(output)
                 res.append(output)
                 if r.returncode != 0:
                     return '\n'.join(res), r.returncode
         except Exception as e:
-            print(e)
+            logger.debug(e)
             return '\n'.join(res), -1
         finally:
             os.chdir(cur_dir)

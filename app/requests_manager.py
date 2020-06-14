@@ -34,8 +34,10 @@ class RequestsManager:
                     pass
         except FileNotFoundError:
             raise FileNotFoundError(f"Error! Hosts file cannot be found")
-        self.active_hosts: List[Host] = [HostLocal()]
-        self.available_hosts: List[Host] = [HostLocal()]
+        # self.active_hosts: List[Host] = [HostLocal()]
+        # self.available_hosts: List[Host] = [HostLocal()]
+        self.active_hosts: List[Host] = []
+        self.available_hosts: List[Host] = []
         self.busy_hosts: List[Host] = []
         self.lock = asyncio.Lock()
         self.host_cond_var = asyncio.Condition()
@@ -92,17 +94,17 @@ class RequestsManager:
                 print('Unable to build the target on local computer too...')
                 raise e
 
-        except Exception as e:
-            print("Failed to build target... Trying to build on local computer")
-            if await host.is_available():
-                await self.release_host(host)
-            localhost = await self.get_local_host()
-            try:
-                await localhost.get_compiled_file(session, target, self.lock, self.compressor)
-                await self.release_host(localhost)
-            except ExecutionError as e:
-                print('Unable to build the target on local computer too...')
-                raise e
+        # except Exception as e:
+        #     print(f"Failed to build target... Reason: {str(e)}\n Trying to build on local computer")
+        #     if await host.is_available():
+        #         await self.release_host(host)
+        #     localhost = await self.get_local_host()
+        #     try:
+        #         await localhost.get_compiled_file(session, target, self.lock, self.compressor)
+        #         await self.release_host(localhost)
+        #     except ExecutionError as e:
+        #         print('Unable to build the target on local computer too...')
+        #         raise e
 
     async def build_targets(self):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
