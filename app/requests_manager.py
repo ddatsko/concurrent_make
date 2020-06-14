@@ -25,7 +25,10 @@ class RequestsManager:
         try:
             hosts_file_lines = open(hosts_filename).readlines()
             for line in hosts_file_lines:
+                if line.strip().startswith('#'):
+                    continue
                 try:
+                    line = line.strip()
                     self.hosts.append(Host(line.split()[0], line.split()[1]))
                 except KeyError:
                     pass

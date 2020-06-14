@@ -82,12 +82,11 @@ But, unfortunately, it has pretty less functionality, than Makefile.
 ### ```hosts``` file
 Path to file with hosts is relative to the program directory and is specified in ```config.py```, unless it is specified in ```--hosts HOSTS``` command lin argumet. Then the path is relative current location
 File should contain many lines, containing information about the url for server and the password to it separated with single space. Comments are lines, starting with '#' sign.
-##### NOTE: comments like ```<host_address> <password> # This is comment``` are not allowed
 E.g.
 ```
-https://0.0.0.0:3000 strongest_password_ever
+https://0.0.0.0:3000 strongest_password_ever THIS_WILL BE IGNORED
 # This is a comment
-https://0.0.0.0:2000 my_p@s$w0rd
+https://0.0.0.0:2000 my_p@s$w0rd # THIS WILL BE IGNORED TOO
 ```
 
 
