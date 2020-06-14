@@ -106,11 +106,9 @@ class BuildTarget:
         for file in files_list:
             if match := re.match(r"\$[{(](.*?)[})]", file):
                 # Take variable, calculate expression and add all the files to dependency files
-                updated_list.extend(map(lambda x: x.strip(),
-                                        parser.calculate_expression(parser.variables[match.groups('0')[0]].split(''))))
+                updated_list.append(parser.calculate_expression(file))
             else:
                 updated_list.append(file)
-
         files_list.clear()
         files_list.extend(updated_list)
 

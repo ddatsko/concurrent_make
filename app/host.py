@@ -61,8 +61,8 @@ class Host:
 
     async def get_archive(self, data: aiohttp.FormData, session: aiohttp.ClientSession) -> bytes:
         try:
-            resp = await session.post(url=self.address + self.BUILD_ENDPOINT, data=data, receive_timeout=config.RECEIVE_TIMEOUT)
-        except ConnectionError as e:
+            resp = await asyncio.wait_for(session.post(url=self.address + self.BUILD_ENDPOINT, data=data), timeout=config.RECEIVE_TIMEOUT)
+        except Exception as e:
             print(e)
             raise e
         data = await resp.content.read()
@@ -76,12 +76,11 @@ class Host:
             archive_file = tempfile.NamedTemporaryFile(suffix='tar.xz')
             commands_file = tempfile.NamedTemporaryFile(suffix='.sh')
             target.substitute_for_absolute_paths('/')
-            data.add_field('workdir', os.path.dirname(__file__))
+            data.add_field('workdir', os.getcwd())
             data.add_field('targets', ', '.join(target.target_files))
             data.add_field('commands_file', commands_file.name)
             data.add_field('password', self.password)
 
-        print(target.all_dependency_files)
         response = await session.post(url=self.address + self.CHECK_LIBRARIES_ENDPOINT,
                                       json=f'{{"needed_libraries": {[file for file in target.all_dependency_files if ".so" in file]}, "password": "{self.password}"}}')
         present_libraries = (await response.json())['present_libraries']

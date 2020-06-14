@@ -75,12 +75,7 @@ class Parser:
                 break
             for value in values:
                 if value in self.variables:
-                    expression = re.sub(r"\$[{(]" + str('a') + r"[})]", self.variables[value], expression)
-
-        functions = re.findall(r"\$[{(](.*?)[})]", expression)
-        for function in functions:
-            function_name, arguments = function.split()
-
+                    expression = re.sub(r"\$[{(]" + str(value) + r"[})]", self.variables[value], expression)
         return expression
 
     def get_build_targets(self):
