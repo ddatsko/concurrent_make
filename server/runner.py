@@ -39,7 +39,7 @@ class CommandRunner:
                     return '\n'.join(res), r.returncode
         except Exception as e:
             print(e)
-            pass
+            return '\n'.join(res), -1
         finally:
             os.chdir(cur_dir)
         return '\n'.join(res), 0

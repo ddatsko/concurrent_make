@@ -5,8 +5,8 @@ OBJECT_FILES = ${OBJECTS_DIR}/main.o ${OBJECTS_DIR}/IntegralCalculator.o ${OBJEC
 
 
 
-lab_integral: ${OBJECT_FILES} IntegralCalculator.h Function.h TimeCounter.h utils.h /lib/x86_64-linux-gnu/libpthread-2.30.so /lib/x86_64-linux-gnu/libc.so.6 /lib64/ld-linux-x86-64.so.2
-	mkdir -p build && ${CXX} -o $@ ${OBJECT_FILES} /lib/x86_64-linux-gnu/libpthread-2.30.so
+lab_integral: ${OBJECT_FILES} IntegralCalculator.h Function.h TimeCounter.h utils.h /lib/x86_64-linux-gnu/libpthread-2.30.so /lib/x86_64-linux-gnu/libc.so.6 /lib64/ld-linux-x86-64.so.2 /lib/x86_64-linux-gnu/libc-2.30.so /lib/x86_64-linux-gnu/ld-2.30.so
+	mkdir -p build && ${CXX} -o $@ ${OBJECT_FILES} /lib/x86_64-linux-gnu/libpthread-2.30.so /lib/x86_64-linux-gnu/ld-2.30.so /lib/x86_64-linux-gnu/libc-2.30.so
 
 ${OBJECTS_DIR}/main.o: main.cpp Function.h TimeCounter.h IntegralCalculator.h utils.h
 	mkdir -p build && ${CXX} -c -o $@ main.cpp ${COMPILE_FLAGS}
