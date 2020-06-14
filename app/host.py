@@ -84,6 +84,7 @@ class Host:
             data.add_field('targets', ', '.join(target.target_files))
             data.add_field('commands_file', commands_file.name)
             data.add_field('password', self.password)
+            data.add_field('exact_lib_versions', 'true' if config.EXACT_LIB_VERSIONS else 'false')
 
         if self.libraries is None:
             self.libraries = []
@@ -94,7 +95,6 @@ class Host:
                     self.libraries.append(Library(library))
                 except:
                     continue
-            print('\n'.join([library.name for library in self.libraries]))
 
         present_libraries = []
         for file in target.all_dependency_files:

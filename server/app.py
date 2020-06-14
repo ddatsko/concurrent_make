@@ -87,10 +87,9 @@ def build():
     # Run commands
     print(new_root)
 
-    # TODO> remove this crap []
-    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'), [])
+    command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'), app.config['LIBRARIES'])
 
-    output, code = command_runner.run_commands(new_root + commands_file, new_root, logger)
+    output, code = command_runner.run_commands(new_root + commands_file, new_root, logger, request.form['exact_lib_versions'] == 'true')
     print(output, code)
     if code != 0:
         logger.debug(code)
@@ -109,6 +108,5 @@ def build():
 
 
 if __name__ == "__main__":
-    # app.config['LIBRARIES'] = find_libraries()
-    app.config['LIBRARIES'] = []
-    app.run(host='0.0.0.0', port=3000, debug=True, ssl_context='adhoc')
+    app.config['LIBRARIES'] = find_libraries()
+    app.run(host='0.0.0.0', port=2000, debug=True, ssl_context='adhoc')

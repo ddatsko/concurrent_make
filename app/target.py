@@ -146,8 +146,8 @@ class BuildTarget:
                             added = True
                 except:
                     pass
-
                 try:
+                    # Check other dependencies
                     result = CommandRunner(os.getcwd()).run_one_command(f'ldd {library}')
                     for line in result.splitlines():
                         if match := re.match(r'.*\s(/.+?)\s', line):

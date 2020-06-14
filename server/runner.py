@@ -10,7 +10,7 @@ class CommandRunner:
         self.root_dir = root_dir
         self.present_libraries = present_libraries
 
-    def run_commands(self, commands_file: str, abs_paths_root: str, logger) -> (str, int):
+    def run_commands(self, commands_file: str, abs_paths_root: str, logger, exact_versions: bool) -> (str, int):
         """
         :return the name of created file (target)
         """
@@ -26,7 +26,7 @@ class CommandRunner:
             for i in range(len(lines)):
                 for library in re.findall(r'\${(.*?)}', lines[i]):
                     lines[i] = re.sub(r'\${' + library + '}',
-                                      Library.find_library_in_list(library, self.present_libraries).abs_path, lines[i])
+                                      Library.find_library_in_list(library, self.present_libraries, exact_versions).abs_path, lines[i])
 
             logger.debug("Lines After: " + '\n'.join(lines))
             for command in lines:

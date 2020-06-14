@@ -2,6 +2,7 @@ from typing import Iterable, Dict, Set, List
 import os
 import re
 from errors import InvalidLibraryFileName
+import config
 
 
 class Library:
@@ -24,7 +25,6 @@ class Library:
             else:
                 self.version = (0,)
         except Exception as e:
-            print(e)
             self.version = (0,)
         self.abs_path = os.path.abspath(path_to_file)
 
@@ -49,7 +49,7 @@ class Library:
     def find_library_in_list(library_name: str, libraries: List['Library']) -> 'Library' or None:
         looked_library = Library(library_name)
         for library in libraries:
-            if library >= looked_library:
+            if (not config.EXACT_LIB_VERSIONS and library >= looked_library) or library == looked_library:
                 return library
 
 

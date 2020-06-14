@@ -24,7 +24,6 @@ class Library:
             else:
                 self.version = (0,)
         except Exception as e:
-            print(e)
             self.version = (0,)
         self.abs_path = os.path.abspath(path_to_file)
 
@@ -46,11 +45,8 @@ class Library:
         return f"Library(name={self.name}, path={self.abs_path}, version={'.'.join(map(str, self.version))})\n"
 
     @staticmethod
-    def find_library_in_list(library_name: str, libraries: List['Library']) -> 'Library' or None:
+    def find_library_in_list(library_name: str, libraries: List['Library'], exact_versions: bool) -> 'Library' or None:
         looked_library = Library(library_name)
         for library in libraries:
-            if library >= looked_library:
+            if (not exact_versions and library >= looked_library) or library == looked_library:
                 return library
-
-
-

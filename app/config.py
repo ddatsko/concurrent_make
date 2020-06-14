@@ -10,3 +10,6 @@ CHECK_MORE_DEPENDENCIES: bool = True
 # Timeout (In SECONDS!!) of websocket to receive a complete response. If the server does not respond after
 # this timout, connection with it will be closed. None means wait forever.
 RECEIVE_TIMEOUT: float or None = None
+
+# If False, libraries with higher versions will substitute ones with lower ones
+EXACT_LIB_VERSIONS: bool = False
