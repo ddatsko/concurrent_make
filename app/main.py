@@ -13,6 +13,8 @@ parser.add_argument('--file', default='', dest='file', help='File with configura
 parser.add_argument('--hosts', default='', dest='hosts', help='File with hosts for building')
 parser.add_argument('--max-timeout', type=float, default=None, dest='timeout', help='Maximum waiting time (in seconds)'
                                                                                     'for host to build a target')
+parser.add_argument('-j', default=1, type=int, dest='cores', help='Max numbre of processes on local computer')
+
 
 hosts_file = os.path.join(os.path.dirname(__file__), config.HOSTS_FILE)
 
@@ -45,4 +47,6 @@ if __name__ == "__main__":
         hosts_file = args.hosts
     if args.timeout:
         config.RECEIVE_TIMEOUT = args.timeout
+    if args.cores:
+        config.MAX_LOCAL_PROCESSES = args.cores
     asyncio.run(main())

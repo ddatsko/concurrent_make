@@ -15,3 +15,5 @@ RECEIVE_TIMEOUT: float or None = None
 EXACT_LIB_VERSIONS: bool = False
 
 CHOOSE_HOST_WITH_MORE_LIBS: bool = False
+
+MAX_LOCAL_PROCESSES: int = 0

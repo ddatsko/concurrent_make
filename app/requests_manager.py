@@ -35,18 +35,25 @@ class RequestsManager:
                     pass
         except FileNotFoundError:
             raise FileNotFoundError(f"Error! Hosts file cannot be found")
-        self.active_hosts: List[Host] = [HostLocal()]
-        self.available_hosts: List[Host] = [HostLocal()]
+        self.active_hosts: List[Host] = [HostLocal() for _ in range(config.MAX_LOCAL_PROCESSES)]
+        self.available_hosts: List[Host] = [HostLocal() for _ in range(config.MAX_LOCAL_PROCESSES)]
         self.busy_hosts: List[Host] = []
         self.lock = asyncio.Lock()
         self.host_cond_var = asyncio.Condition()
         self.parser = parser
 
+    async def add_available_host(self, host: Host):
+        if await host.is_available():
+            self.available_hosts.append(host)
+            self.active_hosts.append(host)
+
     async def check_active_hosts(self):
+        checks = []
         for host in self.hosts:
-            if await host.is_available():
-                self.active_hosts.append(host)
-                self.available_hosts.append(host)
+            checks.append(self.add_available_host(host))
+        await asyncio.gather(*checks)
+
+
 
     async def get_local_host(self) -> Host:
         async with self.host_cond_var:

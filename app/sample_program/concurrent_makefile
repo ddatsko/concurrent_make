@@ -21,9 +21,3 @@ ${OBJECTS_DIR}/TimeCounter.o: TimeCounter.cpp TimeCounter.h
 ${OBJECTS_DIR}/utils.o: utils.cpp utils.h
 	mkdir -p build	
 	${CXX} -c -o $@ utils.cpp ${COMPILE_FLAGS}
-
-
-
-
-
-
