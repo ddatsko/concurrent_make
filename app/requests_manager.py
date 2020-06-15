@@ -103,6 +103,7 @@ class RequestsManager:
     async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> None:
         # Acquire the lock to get a temporary file
         await target.get_libraries_dependencies()
+        await target.get_headers_dependencies()
         if config.CHOOSE_HOST_WITH_MORE_LIBS:
             host = await self.get_best_host(target)
         else:
@@ -124,17 +125,17 @@ class RequestsManager:
                 print('Unable to build the target on local computer too...')
                 raise e
 
-        except Exception as e:
-            print(f"Failed to build target... Reason: {str(e)}\n Trying to build on local computer")
-            if await host.is_available():
-                await self.release_host(host)
-            localhost = await self.get_local_host()
-            try:
-                await localhost.get_compiled_file(session, target, self.lock, self.compressor)
-                await self.release_host(localhost)
-            except ExecutionError as e:
-                print('Unable to build the target on local computer too...')
-                raise e
+        # except Exception as e:
+        #     print(f"Failed to build target... Reason: {str(e)}\n Trying to build on local computer")
+        #     if await host.is_available():
+        #         await self.release_host(host)
+        #     localhost = await self.get_local_host()
+        #     try:
+        #         await localhost.get_compiled_file(session, target, self.lock, self.compressor)
+        #         await self.release_host(localhost)
+        #     except ExecutionError as e:
+        #         print('Unable to build the target on local computer too...')
+        #         raise e
 
     async def build_targets(self):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:

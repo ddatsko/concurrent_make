@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: make4
+  name: make5
   labels:
-    app: make4
+    app: make5
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: make4
+      app: make5
   template:
     metadata:
       labels:
-        app: make4
+        app: make5
     spec:
       containers:
-        - name: make4
-          image: ddatsko/concurrent_make:latest
+        - name: make5
+          image: ddatsko/boost_concurrent_make:latest
           ports:
             - containerPort: 3000
           imagePullPolicy: Always

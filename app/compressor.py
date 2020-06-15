@@ -9,7 +9,7 @@ class Compressor:
         self.root_path = root_path if root_path.endswith('/') else root_path + '/'
 
     def compress(self, files: Iterable[str], output_file_name: str):
-        print(f"Compressing files {files}")
+        print(f"Compressing files...")
         if not output_file_name.endswith('tar.xz'):
             output_file_name += '.tar.xz'
         cur_dir = os.getcwd()

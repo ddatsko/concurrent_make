@@ -59,7 +59,8 @@ class BuildTarget:
         for command in self.bash_commands:
             updated_command = f' {command} '  # simple way to make all the words be surrounded by spaces
             for file in replaces:
-                updated_command = re.sub(rf'\s{file}\s', f' {replaces[file]} ', updated_command)
+                updated_command = re.sub(r'\s{' + file.replace('+', '\\+') + r'\s', f' {os.path.abspath(replaces[file])} ', updated_command)
+                # updated_command = updated_command.replace(f' {file} ', f' {replaces[file]} ')
             new_bash_commands.append(updated_command)
         self.bash_commands = new_bash_commands
 
@@ -93,7 +94,7 @@ class BuildTarget:
     async def replace_in_commands(self, pattern: str, value: str):
         self.bash_commands = list(map(lambda x: f' {x} ', self.bash_commands))  # Wrap each command into spaces
         for i in range(len(self.bash_commands)):
-            self.bash_commands[i] = re.sub(rf'\s{pattern}\s', f' {value} ', self.bash_commands[i])
+            self.bash_commands[i] = re.sub(r'\s' + pattern.replace("+", "\\+") + r'\s', f' {value} ', self.bash_commands[i])
 
     async def process_dependencies(self, parser):
         self.dependencies_targets = []
@@ -125,7 +126,8 @@ class BuildTarget:
     async def get_libraries_dependencies(self):
         if not config.CHECK_MORE_DEPENDENCIES:
             return
-        dependencies_libraries = {file for file in self.dependencies_files_only if file.endswith('.so') or '.so.' in file}
+        dependencies_libraries = {file for file in self.dependencies_files_only if
+                                  file.endswith('.so') or '.so.' in file}
         added = len(dependencies_libraries) != 0
         while added:
             new_dependencies = set()
@@ -136,11 +138,12 @@ class BuildTarget:
 
                 # check symlinks
                 try:
-                    result = CommandRunner(os.getcwd()).run_one_command(f'ls {library_dir} -la | grep {library_filename}')
-                    if '->' in result:
-                        lib = result.split(' -> ')[1].strip()
+                    result = CommandRunner(os.getcwd()).run_one_command(
+                        f'ls {library_dir} -la | grep {library_filename}')
+                    if ' -> ' in result:
+                        lib = result.split(' -> ')[1].split('\n')[0].strip()
                         if not lib.startswith('/'):
-                            lib = library_dir + '/' + result.split(' -> ')[1].strip()
+                            lib = library_dir + '/' + result.split(' -> ')[1].split('\n')[0].strip()
                         if lib not in dependencies_libraries:
                             new_dependencies.add(lib)
                             added = True
@@ -160,3 +163,19 @@ class BuildTarget:
                 dependencies_libraries.add(library)
         self.dependencies_files_only = list(set(self.dependencies_files_only).union(dependencies_libraries))
         self.all_dependency_files = list(set(self.all_dependency_files).union(dependencies_libraries))
+
+    async def get_headers_dependencies(self):
+        if not config.USE_CXX_M:
+            return
+        added = set(self.all_dependency_files)
+        for file in self.all_dependency_files:
+            try:
+                r = CommandRunner(os.getcwd()).run_one_command(f'g++ -M {file}')
+                for line in r.splitlines()[1:]:
+                    headers = line.strip().strip('\\').strip().split()
+                    for header in headers:
+                        added.add(header)
+            except:
+                continue
+        self.all_dependency_files = list(set(self.all_dependency_files).union(added))
+        self.dependencies_files_only = list(set(self.dependencies_files_only).union(added))

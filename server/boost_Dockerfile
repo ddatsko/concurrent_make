@@ -1,0 +1,38 @@
+FROM amd64/ubuntu:18.04
+
+RUN apt-get update -y && apt-get install python3.8 -y && apt-get install python3-pip -y
+
+RUN apt-get install build-essential g++ python-dev autotools-dev libicu-dev libbz2-dev -y
+
+RUN apt-get install wget -y
+
+RUN wget -O boost_1_72_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.gz/download
+
+RUN tar xzvf boost_1_72_0.tar.gz
+
+WORKDIR boost_1_72_0/
+
+RUN ./bootstrap.sh --prefix=/usr/local
+
+RUN ./b2 --with=all install
+
+RUN sh -c 'echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf'
+
+RUN ldconfig
+
+RUN mkdir -p /app
+
+WORKDIR /app
+
+COPY ./requirements.txt .
+
+RUN python3.8 -m pip install -r requirements.txt
+
+RUN uname -m
+
+COPY . .
+
+EXPOSE 3000
+
+CMD python3.8 app.py
+

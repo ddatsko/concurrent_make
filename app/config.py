@@ -17,3 +17,5 @@ EXACT_LIB_VERSIONS: bool = False
 CHOOSE_HOST_WITH_MORE_LIBS: bool = False
 
 MAX_LOCAL_PROCESSES: int = 0
+
+USE_CXX_M: bool = True
