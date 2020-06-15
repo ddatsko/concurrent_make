@@ -90,10 +90,9 @@ def build():
     command_runner = CommandRunner(new_root + request.form['workdir'].strip('/'), app.config['LIBRARIES'])
 
     output, code = command_runner.run_commands(new_root + commands_file, new_root, logger, request.form['exact_lib_versions'] == 'true')
-    print(output, code)
     if code != 0:
         logger.debug(code)
-        response = str(code), 400
+        response = output, 400
     else:
         # Sending files back
         target_files = [target.strip('/') for target in request.form['targets'].split(', ')]

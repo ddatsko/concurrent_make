@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: make-service5
+  name: make-service4
 spec:
   type: LoadBalancer
   selector:
-    app: make5
+    app: make4
   ports:
     - name: main
       protocol: TCP

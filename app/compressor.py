@@ -10,6 +10,7 @@ class Compressor:
 
     def compress(self, files: Iterable[str], output_file_name: str):
         print(f"Compressing files...")
+        print(f"Libraries: {[file for file in files if '.so' in file]}")
         if not output_file_name.endswith('tar.xz'):
             output_file_name += '.tar.xz'
         cur_dir = os.getcwd()
