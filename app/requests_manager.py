@@ -8,6 +8,7 @@ from parser import Parser
 from host import Host
 from host_local import HostLocal
 from typing import List
+import config
 
 
 class RequestsManager:
@@ -95,7 +96,10 @@ class RequestsManager:
     async def get_compiled_file(self, session: aiohttp.ClientSession, target: BuildTarget) -> None:
         # Acquire the lock to get a temporary file
         await target.get_libraries_dependencies()
-        host = await self.get_best_host(target)
+        if config.CHOOSE_HOST_WITH_MORE_LIBS:
+            host = await self.get_best_host(target)
+        else:
+            host = await self.get_available_host()
         try:
             await host.get_compiled_file(session, target, self.lock, self.compressor)
             await self.release_host(host)

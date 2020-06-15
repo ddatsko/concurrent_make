@@ -1,0 +1,23 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: make4
+  labels:
+    app: make4
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: make4
+  template:
+    metadata:
+      labels:
+        app: make4
+    spec:
+      containers:
+        - name: make4
+          image: ddatsko/concurrent_make:latest
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always

@@ -13,3 +13,5 @@ RECEIVE_TIMEOUT: float or None = None
 
 # If False, libraries with higher versions will substitute ones with lower ones
 EXACT_LIB_VERSIONS: bool = False
+
+CHOOSE_HOST_WITH_MORE_LIBS: bool = False
